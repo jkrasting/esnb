@@ -7,6 +7,7 @@ import warnings
 
 import doralite
 import intake_esm
+import json
 import momgrid as mg
 import pandas as pd
 import xarray as xr
@@ -82,7 +83,7 @@ class CaseExperiment:
         name=None,
         date_range=None,
         catalog=None,
-        source="dora",
+        source="dora",  # settings.jsonc
         verbose=False,
     ):
         self.name = name
@@ -91,6 +92,7 @@ class CaseExperiment:
         self.source = source
         self.catalog = catalog
 
+        # TODO - make conformant to MDTF keys where possible
         if source == "dora":
             if verbose:
                 print(f"{location}: Fetching metadata from Dora")
@@ -102,12 +104,40 @@ class CaseExperiment:
                     print(f"{location}: Loading intake catalog from Dora")
                 self.catalog = load_dora_catalog(location)
                 self.catalog = self.catalog.datetime()
+
+        elif source == "mdtf-input":
+            assert os.path.exists(location), "MDTF Case input file is not accessible"
+            with open(location, "r") as f:
+                input_data = yaml.safe_load(f)
+                self.settings = input_data
+                self.__dict__ = {**self.__dict__, **input_data}
+
         else:
             self.metadata = None
 
         if date_range is not None:
             self.date_range = xr_date_range_format(date_range)
             self.filter_date_range(self.date_range)
+
+    def dump(self, filename=None, type="yaml"):
+        if filename is not None:
+            with open(filename, "w") as f:
+                yaml.dump(
+                    self.settings,
+                    f,
+                    Dumper=NoAliasDumper,
+                    indent=2,
+                    sort_keys=True,
+                    default_flow_style=False,
+                )
+        else:
+            return yaml.dump(
+                self.settings,
+                Dumper=NoAliasDumper,
+                indent=2,
+                sort_keys=True,
+                default_flow_style=False,
+            )
 
     @property
     def has_catalog(self):
@@ -131,37 +161,37 @@ class NotebookDiagnostic:
     def __init__(self, name, description=None, variables=None, **kwargs):
         self.name = name
         self.description = "" if description is None else description
-
-        if variables is not None:
-            if not isinstance(variables, list):
-                variables = [variables]
-
         self.variables = variables
         self.diag_vars = kwargs
 
-    def to_yaml(self):
-        output = {}
-        output["long_name"] = self.name
-        output["description"] = self.description
+        assert isinstance(name, str), "String or valid path must be supplied"
+        if os.path.exists(name):
+            with open(name, "r") as f:
+                lines = [line.strip() for line in f]
+                lines = [x for x in lines if "//" not in x]
+            json_str = "".join(lines)
+            self.options = json.loads(json_str)
+            self.__dict__ = {**self.__dict__, **self.options}
 
-        vardict = {}
-        for v in self.variables:
-            _vardict = v.to_dict()
-            _ = _vardict.pop("varname", None)
-            vardict[str(v)] = _vardict
+        else:
+            # TODO make the initialization consitent with existing keys
+            self.options = {}
+            self.options["settings"] = {
+                "name": self.name,
+                "description": self.description,
+            }
+            if variables is not None:
+                if not isinstance(variables, list):
+                    variables = [variables]
 
-        output["varlist"] = vardict
+            if len(self.diag_vars) > 0:
+                self.options["diag_vars"] = self.diag_vars
 
-        if len(self.diag_vars) > 0:
-            output["diag_vars"] = self.diag_vars
-
-        return yaml.dump(
-            output,
-            Dumper=NoAliasDumper,
-            indent=2,
-            sort_keys=True,
-            default_flow_style=False,
-        )
+    def dump(self, filename="settings.json", type="json"):
+        if type == "json":
+            filename = f"{filename}"
+            with open(filename, "w") as f:
+                json.dump(self.settings, f, indent=2)
 
     def __repr__(self):
         return f"NotebookDiagnostic {self.name}"
