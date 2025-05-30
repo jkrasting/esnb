@@ -1,0 +1,175 @@
+import datetime
+import os
+import re
+import subprocess
+import tempfile
+import warnings
+
+import intake_esm
+import json
+import pandas as pd
+import xarray as xr
+import yaml
+
+try:
+    import doralite
+    import momgrid as mg
+except:
+    pass
+
+from .CaseExperiment import CaseExperiment
+from . import util
+from esnb.sites import gfdl
+
+
+class CaseGroup:
+    def __init__(
+        self,
+        locations,
+        concat_dim=None,
+        name=None,
+        date_range=None,
+        catalog=None,
+        source="dora",
+        verbose=True,
+    ):
+        self.locations = [locations] if not isinstance(locations, list) else locations
+        if len(self.locations) > 1:
+            assert concat_dim is not None, (
+                "You must supply and existing or new dimension for concatenation"
+            )
+        self.concat_dim = concat_dim
+        self.date_range = date_range
+        self.source = source
+        self.ds = None
+        self.is_resolved = False
+        self.is_loaded = False
+        self.variables = []
+        self.verbose = verbose
+
+        self.cases = [
+            CaseExperiment(
+                x,
+                date_range=date_range,
+                catalog=catalog,
+                source=source,
+                verbose=verbose,
+            )
+            for x in self.locations
+        ]
+
+        if name is None:
+            if len(self.cases) == 1:
+                self.name = self.cases[0].name
+            elif len(self.cases) == 0:
+                self.name = " *EMPTY* "
+            else:
+                self.name = "Multi-Case Group"
+        else:
+            self.name = name
+
+    def resolve_datasets(self, diag, verbose=None):
+        verbose = self.verbose if verbose is None else verbose
+        variables = diag.variables
+        for case in self.cases:
+            if verbose:
+                print(f"Resolving required vars for {case.name}")
+            subcatalogs = []
+            for var in variables:
+                subcat = case.catalog.find(**var.search_options)
+                subcatalogs.append(subcat)
+            if len(subcatalogs) > 1:
+                catalog = subcatalogs[0].merge(subcatalogs[1:])
+            else:
+                catalog = subcatalogs[0]
+            case.catalog = catalog
+        self.variables = [str(x) for x in diag.variables]
+        self.is_resolved = True
+
+    def dmget(self, verbose=None):
+        verbose = self.verbose if verbose is None else verbose
+        gfdl.call_dmget(self.files, verbose=verbose)
+
+    def load(self, exact_times=True, consolidate=True):
+        assert self.is_resolved is True, "Call .resolve_datasets() before loading"
+        realms = sum([x.catalog.realms for x in self.cases], [])
+        realms = list(set(realms))
+        ds_by_realm = {}
+        for realm in realms:
+            subcats = [case.catalog.search(realm=realm) for case in self.cases]
+            dsets = [x.to_xarray() for x in subcats]
+            if len(dsets) > 1:
+                _ds = xr.concat(dsets, "time")
+            else:
+                _ds = dsets[0]
+            if exact_times:
+                if self.date_range is not None:
+                    dates = util.xr_date_range_format(self.date_range)
+                else:
+                    dates = (None, None)
+                _ds = _ds.sel(time=slice(*dates))
+            ds_by_realm[realm] = _ds
+        if consolidate:
+            self.ds = util.consolidate_datasets(ds_by_realm)
+        else:
+            self.ds = ds_by_realm
+        self.is_loaded = True
+
+    def dump(self, dir=None, fname=None, type="netcdf"):
+        assert self.is_loaded is True, "Call .load() before dumping to file"
+        assert isinstance(self.ds, list), (
+            "Datasets must be consolidated before dumping to file"
+        )
+        if dir is None:
+            dir = tempfile.mkdtemp(dir=os.getcwd())
+        assert os.path.isdir(dir)
+        updated_ds = []
+        if fname is None:
+            name = self.name
+        for ds in self.ds:
+            t0 = ds.time.values[0].isoformat()
+            t1 = ds.time.values[-1].isoformat()
+            dsvars = list(set(self.variables) & set(list(ds.keys())))
+            dsvars = str(" ").join(dsvars)
+            fname = clean_string(f"{name} {t0} {t1} {dsvars}")
+            resolved_path = f"{dir}/{fname}"
+            if type == "netcdf":
+                resolved_path = f"{dir}/{fname}.nc"
+                ds.to_netcdf(resolved_path)
+                updated_ds.append(resolved_path)
+            elif type == "zarr":
+                ds.to_zarr(resolved_path)
+                updated_ds.append(resolved_path)
+            else:
+                raise ValueError(f"Unsupported type: {type}")
+        self.ds = updated_ds
+
+    @property
+    def catalog(self):
+        assert self.is_resolved, (
+            "Datasets must be resolved first. Call .resolve_datasets()"
+        )
+        if len(self.cases) > 0:
+            catalogs = [x.catalog for x in self.cases]
+            if len(catalogs) == 1:
+                result = catalogs[0]
+            else:
+                result = catalogs[0].merge(catalogs[1:])
+        return result
+
+    @property
+    def files(self):
+        return sorted(self.catalog.info("path"))
+
+    def __repr__(self):
+        nloc = len(self.locations)
+        name = self.name
+        res = ""
+        res = (
+            res
+            + f"CaseGroup <{name}>  n_sources={nloc}  resolved={self.is_resolved}  loaded={self.is_loaded}"
+        )
+        if len(self.cases) >= 1:
+            for case in self.cases:
+                res = res + f"\n  * {str(case)}"
+        return res
