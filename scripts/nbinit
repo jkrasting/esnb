@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+"""Simple script to initialize a new notebook from a template"""
+
+import os
+import sys
+import glob
+import shutil
+from importlib_resources import files
+
+if len(sys.argv) == 1:
+    print("usage: nbinit template_name target_file")
+    exit(-1)
+
+requested = sys.argv[1]
+
+if len(sys.argv) == 3:
+    destination = sys.argv[2]
+else:
+    destination = f"{requested}.ipynb"
+
+nb_path = str(files("esnb.templates") / "*.ipynb")
+flist = glob.glob(nb_path)
+fdict = {os.path.splitext(os.path.basename(x))[0]: x for x in flist}
+
+if requested in fdict.keys():
+    source = fdict[requested]
+    if os.path.exists(destination):
+        print("ERROR: destination path already exists.")
+        sys.exit(1)
+    shutil.copy(source, destination)
+    sys.exit(0)
+else:
+    print(f"ERROR: Notebook template '{requested}' does not exist.")
+    sys.exit(2)

@@ -1,0 +1,61 @@
+[build-system]
+requires = [ "setuptools>=41", "wheel", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esnb"
+description = "Earth Science Notebook Tools for Climate and Weather Model Analysis"
+dynamic = ["version"]
+authors = [
+    {name = "John Krasting", email="john.krasting@noaa.gov"}
+]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["model", "analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "License :: Public Domain",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "importlib_metadata <5.0.0",
+    "nc-time-axis",
+    "netcdf4",
+    "numpy >=1.21.0",
+    "scikit-learn >=1.0.1",
+    "xarray >=0.20.0",
+    "xgcm",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
+[project.urls]
+homepage = "https://github.com/jkrasting/esnb"
+documentation = "https://esnb.readthedocs.io"
+repository = "https://github.com/jkrasting/esnb"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools-git-versioning]
+enabled = true
+template = "{tag}"
+dev_template = "{tag}"
+dirty_template = "{tag}"
+starting_version = "0.0.1"
+
+[tool.dynamic]
+version = "placeholder"
+
+[tool.setuptools.package-data]
+esnb = ["templates/"]
+
+[tool.setuptools]
+script-files = ["scripts/nbinit"]
