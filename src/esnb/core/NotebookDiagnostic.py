@@ -108,6 +108,9 @@ class NotebookDiagnostic:
         # stash the settings keys
         self._settings_keys = settings_keys
 
+        # initialize an empty groups attribute
+        self.groups = []
+
     @property
     def settings(self):
         result = {"settings": {}}
@@ -118,11 +121,35 @@ class NotebookDiagnostic:
         result["diag_vars"] = self.diag_vars
         return result
 
+    @property
+    def files(self):
+        all_files = []
+        for group in self.groups:
+            for case in group.cases:
+                all_files = all_files + case.catalog.files
+        return sorted(all_files)
+
+    @property
+    def dsets(self):
+        return [x.ds for x in self.groups]
+
     def dump(self, filename="settings.json", type="json"):
         if type == "json":
             filename = f"{filename}"
             with open(filename, "w") as f:
                 json.dump(self.settings, f, indent=2)
+
+    def dmget(self):
+        _ = [x.dmget() for x in self.groups]
+
+    def load(self):
+        _ = [x.load() for x in self.groups]
+
+    def resolve(self,groups=None):
+        groups = [] if groups is None else groups
+        groups = [groups] if not isinstance(groups,list) else groups
+        self.groups = groups
+        _ = [x.resolve_datasets(self) for x in self.groups]
 
     def __repr__(self):
         return f"NotebookDiagnostic {self.name}"
