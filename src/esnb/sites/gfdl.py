@@ -39,7 +39,7 @@ def call_dmget(files, verbose=False):
             print(
                 f"dmget: Dmgetting {numfiles} of {totalfiles} files requested ({totalsize} MB)"
             )
-        cmd = ["dmget"] + paths
+        cmd = ["dmget"] + list(paths)
         _ = subprocess.check_output(cmd)
 
 

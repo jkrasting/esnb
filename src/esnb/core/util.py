@@ -46,6 +46,13 @@ def consolidate_datasets(dset_dict):
     return consolidated
 
 
+def clean_string(input_string):
+    res = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
+    res = res.replace(" ", "_")
+    res = re.sub(r"_+", "_", res)
+    return res
+
+
 def copy_catalog(cat):
     _source = cat.source_catalog()
     _source["df"] = cat.df.copy()
@@ -110,12 +117,6 @@ def xr_date_range_format(date_range):
 ##     def ignore_aliases(self, data):
 ##         return True
 ##
-##
-## def clean_string(input_string):
-##     res = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
-##     res = res.replace(" ", "_")
-##     res = re.sub(r"_+", "_", res)
-##     return res
 ##
 ##
 ##

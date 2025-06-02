@@ -68,6 +68,18 @@ class CaseGroup:
         else:
             self.name = name
 
+        self.metrics = {}
+
+    def add_metric(self, name, keyval):
+        assert isinstance(name, str), "metric group name must be a string"
+        assert isinstance(keyval, tuple), "metric must be a (key, value) tuple"
+        assert len(keyval) == 2
+        key, value = keyval
+        if name in self.metrics.keys():
+            self.metrics[name] = {**self.metrics[name], key: value}
+        else:
+            self.metrics[name] = {key: value}
+
     def resolve_datasets(self, diag, verbose=None):
         verbose = self.verbose if verbose is None else verbose
         variables = diag.variables

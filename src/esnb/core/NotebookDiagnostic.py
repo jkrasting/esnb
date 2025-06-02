@@ -11,6 +11,8 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+from . import util
+
 try:
     import doralite
     import momgrid as mg
@@ -112,6 +114,25 @@ class NotebookDiagnostic:
         self.groups = []
 
     @property
+    def metrics(self):
+        dimensions = {"json_structure": ["region", "model", "metric"]}
+        results = {"Global": {group.name: group.metrics for group in self.groups}}
+        metrics = {
+            "DIMENSIONS": dimensions,
+            "RESULTS": results,
+        }
+        return metrics
+
+    def write_metrics(self, filename=None):
+        print(json.dumps(self.metrics, indent=2))
+        filename = (
+            util.clean_string(self.name) + ".json" if filename is None else filename
+        )
+        with open(filename, "w") as f:
+            json.dump(self.metrics, f, indent=2)
+        print(f"\nOutput written to: {filename}")
+
+    @property
     def settings(self):
         result = {"settings": {}}
         for key in self._settings_keys:
@@ -145,9 +166,9 @@ class NotebookDiagnostic:
     def load(self):
         _ = [x.load() for x in self.groups]
 
-    def resolve(self,groups=None):
+    def resolve(self, groups=None):
         groups = [] if groups is None else groups
-        groups = [groups] if not isinstance(groups,list) else groups
+        groups = [groups] if not isinstance(groups, list) else groups
         self.groups = groups
         _ = [x.resolve_datasets(self) for x in self.groups]
 
