@@ -160,8 +160,8 @@ class NotebookDiagnostic:
             with open(filename, "w") as f:
                 json.dump(self.settings, f, indent=2)
 
-    def dmget(self):
-        _ = [x.dmget() for x in self.groups]
+    def dmget(self, status=False):
+        _ = [x.dmget(status=status) for x in self.groups]
 
     def load(self):
         _ = [x.load() for x in self.groups]

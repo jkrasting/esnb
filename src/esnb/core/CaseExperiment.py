@@ -21,6 +21,8 @@ except:
 from esnb.sites import gfdl
 from esnb.core.util import xr_date_range_format
 
+from . import util
+
 
 class CaseExperiment:
     def __init__(
@@ -50,6 +52,7 @@ class CaseExperiment:
                     print(f"{location}: Loading intake catalog from Dora")
                 self.catalog = gfdl.load_dora_catalog(location)
                 self.catalog = self.catalog.datetime()
+                self.original_catalog = util.copy_catalog(self.catalog)
 
         elif source == "mdtf-input":
             assert os.path.exists(location), "MDTF Case input file is not accessible"

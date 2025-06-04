@@ -20,7 +20,7 @@ except:
 from esnb.core.esnb_datastore import esnb_datastore
 
 
-def call_dmget(files, verbose=False):
+def call_dmget(files, status=False, verbose=True):
     files = [files] if not isinstance(files, list) else files
     totalfiles = len(files)
     result = subprocess.run(["dmls", "-l"] + files, capture_output=True, text=True)
@@ -39,8 +39,9 @@ def call_dmget(files, verbose=False):
             print(
                 f"dmget: Dmgetting {numfiles} of {totalfiles} files requested ({totalsize} MB)"
             )
-        cmd = ["dmget"] + list(paths)
-        _ = subprocess.check_output(cmd)
+        if status is False:
+            cmd = ["dmget"] + list(paths)
+            _ = subprocess.check_output(cmd)
 
 
 def load_dora_catalog(idnum, **kwargs):

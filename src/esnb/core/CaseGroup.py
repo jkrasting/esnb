@@ -38,7 +38,7 @@ class CaseGroup:
             assert concat_dim is not None, (
                 "You must supply and existing or new dimension for concatenation"
             )
-        self.concat_dim = concat_dim
+        self.concat_dim = "time" if concat_dim is None else concat_dim
         self.date_range = date_range
         self.source = source
         self.ds = None
@@ -57,6 +57,8 @@ class CaseGroup:
             )
             for x in self.locations
         ]
+
+        self.original_catalog = self.cases[0].original_catalog
 
         if name is None:
             if len(self.cases) == 1:
@@ -95,12 +97,30 @@ class CaseGroup:
             else:
                 catalog = subcatalogs[0]
             case.catalog = catalog
+            # Loop over realms for static files
+            realms = list(set(list(case.catalog.df.realm)))
+            statics = self.original_catalog.search(
+                frequency="fx", table_id="fx", realm=realms
+            )
+            case.static_catalog = statics
         self.variables = [str(x) for x in diag.variables]
         self.is_resolved = True
 
-    def dmget(self, verbose=None):
+    @property
+    def ds_by_var(self):
+        vardict = {k: None for k in self.variables}
+        for var in vardict.keys():
+            for ds in self.ds:
+                if var in ds.keys():
+                    vardict[var] = ds
+        return vardict
+
+    def dmget(self, status=False, verbose=None):
         verbose = self.verbose if verbose is None else verbose
         gfdl.call_dmget(self.files, verbose=verbose)
+
+    def open(self, exact_times=True, consolidate=True):
+        return load(self, exact_times=exact_times, consolidate=consolidate)
 
     def load(self, exact_times=True, consolidate=True):
         assert self.is_resolved is True, "Call .resolve_datasets() before loading"
@@ -111,10 +131,11 @@ class CaseGroup:
             subcats = [case.catalog.search(realm=realm) for case in self.cases]
             dsets = [x.to_xarray() for x in subcats]
             if len(dsets) > 1:
-                _ds = xr.concat(dsets, "time")
+                _ds = xr.concat(dsets, self.concat_dim)
             else:
                 _ds = dsets[0]
             if exact_times:
+                # TODO - add a check for the time range here
                 if self.date_range is not None:
                     dates = util.xr_date_range_format(self.date_range)
                 else:
@@ -163,11 +184,28 @@ class CaseGroup:
         )
         if len(self.cases) > 0:
             catalogs = [x.catalog for x in self.cases]
+            static_catalogs = [x.static_catalog for x in self.cases]
             if len(catalogs) == 1:
                 result = catalogs[0]
             else:
                 result = catalogs[0].merge(catalogs[1:])
         return result
+
+    @property
+    def static_catalog(self):
+        assert self.is_resolved, (
+            "Datasets must be resolved first. Call .resolve_datasets()"
+        )
+        if len(self.cases) > 0:
+            catalogs = [x.static_catalog for x in self.cases]
+            if len(catalogs) == 1:
+                result = catalogs[0]
+            else:
+                result = catalogs[0].merge(catalogs[1:])
+        return result
+
+    def load_statics(self):
+        return xr.open_mfdataset(self.static_catalog.info("path"), decode_times=False)
 
     @property
     def files(self):
