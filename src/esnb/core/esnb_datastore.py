@@ -190,6 +190,10 @@ class esnb_datastore(intake_esm.core.esm_datastore):
         return res
 
     @property
+    def files(self):
+        return self.info("path")
+
+    @property
     def realms(self):
         return self.info("realm")
 
