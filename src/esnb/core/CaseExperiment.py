@@ -54,12 +54,16 @@ class CaseExperiment:
                 self.catalog = self.catalog.datetime()
                 self.original_catalog = util.copy_catalog(self.catalog)
 
-        elif source == "mdtf-input":
-            assert os.path.exists(location), "MDTF Case input file is not accessible"
-            with open(location, "r") as f:
-                input_data = yaml.safe_load(f)
-                self.settings = input_data
-                self.__dict__ = {**self.__dict__, **input_data}
+        elif source == "mdtf":
+            self.location = location
+            self.name = name
+            self.date_range = date_range
+            self.catalog = location
+            #assert os.path.exists(location), "MDTF Case input file is not accessible"
+            #with open(location, "r") as f:
+            #    input_data = yaml.safe_load(f)
+            #    self.settings = input_data
+            #    self.__dict__ = {**self.__dict__, **input_data}
 
         else:
             self.metadata = None

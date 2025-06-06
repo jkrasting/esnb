@@ -12,6 +12,7 @@ import xarray as xr
 import yaml
 
 from . import util
+from .RequestedVariable import RequestedVariable
 
 try:
     import doralite
@@ -87,6 +88,8 @@ class NotebookDiagnostic:
 
             settings = {**settings, **init_settings}
             settings_keys = list(set(settings_keys + list(settings.keys())))
+
+            self.variables = [RequestedVariable(k,**v) for k,v in self.varlist.items()]
 
         # case where a diagnostic is initalized directly
         else:
