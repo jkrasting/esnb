@@ -176,7 +176,13 @@ class esnb_datastore(intake_esm.core.esm_datastore):
         if dmget is True:
             call_dmget(_paths)
 
-        ds = xr.open_mfdataset(_paths, use_cftime=True, decode_timedelta=True)
+        ds = xr.open_mfdataset(
+            _paths,
+            use_cftime=True,
+            decode_timedelta=True,
+            combine="nested",
+            compat="override",
+        )
 
         alltimes = sorted([t for x in list(self.df["time_range"].values) for t in x])
         ds.attrs["time_range"] = f"{alltimes[0].isoformat()},{alltimes[-1].isoformat()}"
