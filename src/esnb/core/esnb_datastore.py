@@ -180,7 +180,7 @@ class esnb_datastore(intake_esm.core.esm_datastore):
             _paths,
             use_cftime=True,
             decode_timedelta=True,
-            combine="nested",
+            coords="minimal",
             compat="override",
         )
 
