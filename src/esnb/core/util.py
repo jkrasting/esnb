@@ -19,6 +19,26 @@ except:
 
 from . import esnb_datastore
 
+def write_dict(dictobj, filename, fmt="yaml"):
+    if fmt == "yaml":
+        output = yaml.dump(dictobj, sort_keys=True, indent=2)
+    elif fmt == "json":
+        output = json.dumps(dictobj, indent=4)
+    else:
+        raise ValueError(f"`write_dict` unable to write to unrecognized format: {fmt}")
+
+    if filename is None:
+        print(output)
+    else:
+        with open(filename, "w") as file:
+            file.write(output)
+
+def missing_dict_keys(dictobj, expected_keys):
+    missing = []
+    for key in expected_keys:
+        if key not in dictobj.keys():
+            missing.append(key)
+    return missing
 
 def consolidate_datasets(dset_dict):
     all_dsets = [v for _, v in dset_dict.items()]
