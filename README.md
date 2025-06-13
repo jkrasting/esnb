@@ -1,3 +1,4 @@
+[![](https://github.com/jkrasting/notebook-template/actions/workflows/python-app.yml/badge.svg)](https://github.com/jkrasting/notebook-template/actions/workflows/python-app.yml)
 [![PyPi](https://img.shields.io/pypi/v/esnb.svg)](https://pypi.python.org/pypi/esnb/)
 
 # notebook-template
