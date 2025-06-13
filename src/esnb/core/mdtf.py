@@ -1,11 +1,13 @@
-""" Module with MDTF bindings """
+"""Module with MDTF bindings"""
 
 import logging
 from pathlib import Path
-from esnb.core.util import missing_dict_keys
+
 import yaml
+from esnb.core.util import missing_dict_keys
 
 logger = logging.getLogger(__name__)
+
 
 def gen_mdtf_settings_file_stub():
     return {
@@ -36,12 +38,14 @@ def gen_mdtf_settings_file_stub():
         "user_pp_scripts": None,
     }
 
+
 def standardize_mdtf_case_settings(settings):
     target = gen_mdtf_settings_file_stub()
     for k in target.keys():
-            if k in settings.keys():
-                target[k] = settings[k]
+        if k in settings.keys():
+            target[k] = settings[k]
     return target
+
 
 class MDTFCaseSettings:
     """
@@ -49,6 +53,7 @@ class MDTFCaseSettings:
     This class is designed to load and manage MDTF settings files, which
     contain metadata about cases, data catalogs, and other relevant information.
     """
+
     def load_mdtf_settings_file(self, settings_file):
         """
         Load MDTF settings from a YAML file.
@@ -67,7 +72,9 @@ class MDTFCaseSettings:
         """
         settings_file = Path(settings_file)
         if not settings_file.exists():
-            raise FileNotFoundError(f"MDTF settings file does not exist: {settings_file}")
+            raise FileNotFoundError(
+                f"MDTF settings file does not exist: {settings_file}"
+            )
         self.source = str(settings_file)
 
         with open(settings_file, "r") as f:
@@ -83,12 +90,12 @@ class MDTFCaseSettings:
         self.catalog = _settings["DATA_CATALOG"]
         self.mdtf_settings = _settings
 
-        assert (
-            len(self.catalog) > 0
-        ), f"`DATA_CATALOG` is empty in MDTF settings file {self.source}"
+        assert len(self.catalog) > 0, (
+            f"`DATA_CATALOG` is empty in MDTF settings file {self.source}"
+        )
 
     def write_mdtf_settings_file(self, filename="case_settings.yml", fmt="yaml"):
         _settings = getattr(self, "mdtf_settings", None)
         _settings = gen_mdtf_settings_file_stub() if _settings is None else _settings
         _settings = standardize_mdtf_case_settings(_settings)
-        write_dict(_settings,filename,fmt)
+        write_dict(_settings, filename, fmt)

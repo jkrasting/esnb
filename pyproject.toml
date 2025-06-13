@@ -23,12 +23,13 @@ classifiers = [
 ]
 dependencies = [
     "importlib_metadata <5.0.0",
-    "nc-time-axis",
-    "netcdf4",
-    "numpy >=1.21.0",
-    "scikit-learn >=1.0.1",
-    "xarray >=0.20.0",
-    "xgcm",
+    "intake",
+    "intake_esm",
+    "momgrid",
+    "pandas",
+    "pytest",
+    "pyyaml",
+    "xarray",
 ]
 
 [project.optional-dependencies]

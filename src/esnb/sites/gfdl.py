@@ -1,24 +1,17 @@
-import datetime
 import os
-import re
+import socket
 import subprocess
-import tempfile
-import warnings
 
-import intake_esm
-import json
 import pandas as pd
 import xarray as xr
-import yaml
-import socket
 
 try:
     import doralite
-    import momgrid as mg
 except:
     pass
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from esnb.core.esnb_datastore import esnb_datastore
@@ -31,8 +24,10 @@ def is_host_reachable(host, port=80, timeout=1):
     except (socket.timeout, socket.error):
         return False
 
-dora_hostname = os.environ.get("ESNB_GFDL_DORA_HOSTNAME","dora.gfdl.noaa.gov")
+
+dora_hostname = os.environ.get("ESNB_GFDL_DORA_HOSTNAME", "dora.gfdl.noaa.gov")
 dora = is_host_reachable(dora_hostname, port=443)
+
 
 def call_dmget(files, status=False, verbose=True):
     files = [files] if not isinstance(files, list) else files
