@@ -1,3 +1,5 @@
+[![PyPi](https://img.shields.io/pypi/v/esnb.svg)](https://pypi.python.org/pypi/esnb/)
+
 # notebook-template
 Repository for analysis notebook template development.
 
