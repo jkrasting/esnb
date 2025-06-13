@@ -17,6 +17,8 @@ try:
 except:
     pass
 
+from . import html
+
 
 class RequestedVariable:
     def __init__(
@@ -37,7 +39,7 @@ class RequestedVariable:
         self.path_variable = path_variable
         self.varname = varname
         self.preferred_realm = preferred_realm
-        self.scalar_coordinates= scalar_coordinates
+        self.scalar_coordinates = scalar_coordinates
         self.standard_name = standard_name
         self.source_varname = source_varname
         self.units = units
@@ -74,6 +76,34 @@ class RequestedVariable:
             result["preferred_realm"] = self.preferred_realm
         if self.preferred_chunkfreq is not None:
             result["preferred_chunkfreq"] = self.preferred_chunkfreq
+        return result
+
+    def _repr_html_(self):
+        result = html.gen_html_sub()
+        # Table Header
+        result += f"<h3>{self.__class__.__name__}  --  {self.varname}</h3>"
+        result += "<table class='cool-class-table'>"
+
+        inactive = {}
+        for k in sorted(self.__dict__.keys()):
+            val = self.__dict__[k]
+            if val is not None:
+                result += f"<tr><td><strong>{k}</strong></td><td>{val}</td></tr>"
+            else:
+                inactive[k] = val
+
+        if len(inactive) > 0:
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>Inactive Settings</summary>"
+            result += "<div><table>"
+            for d_key in sorted(inactive.keys()):
+                d_value = inactive[d_key]
+                result += f"<tr><td>{d_key}</td><td>{d_value}</td></tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
         return result
 
     def __repr__(self):
