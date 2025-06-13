@@ -1,25 +1,13 @@
-import datetime
-import os
-import re
-import subprocess
-import tempfile
-import warnings
-
-import intake_esm
-import json
-import pandas as pd
-import xarray as xr
 import yaml
 
 try:
     import doralite
-    import momgrid as mg
 except:
     pass
 
 
-from esnb.sites import gfdl
 from esnb.core.util import xr_date_range_format
+from esnb.sites import gfdl
 
 from . import util
 
@@ -31,7 +19,7 @@ class CaseExperiment:
         name=None,
         date_range=None,
         catalog=None,
-        source="dora",  # settings.jsonc
+        source="dora",
         verbose=False,
     ):
         self.name = name
@@ -59,8 +47,8 @@ class CaseExperiment:
             self.name = name
             self.date_range = date_range
             self.catalog = location
-            #assert os.path.exists(location), "MDTF Case input file is not accessible"
-            #with open(location, "r") as f:
+            # assert os.path.exists(location), "MDTF Case input file is not accessible"
+            # with open(location, "r") as f:
             #    input_data = yaml.safe_load(f)
             #    self.settings = input_data
             #    self.__dict__ = {**self.__dict__, **input_data}
