@@ -11,7 +11,12 @@ import pandas as pd
 import xarray as xr
 import yaml
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from . import util
+from . import html
 from .RequestedVariable import RequestedVariable
 
 try:
@@ -32,18 +37,23 @@ def json_init(name):
 class NotebookDiagnostic:
     def __init__(
         self,
-        name,
+        source,
+        name=None,
         description=None,
         dimensions=None,
         variables=None,
         varlist=None,
         **kwargs,
     ):
-        self.name = name
+        logger.info(f"Initalizing NotebookDiagnostic object from {source}")
+        self.source = source
         self.description = description
+        self.name = name
         self.dimensions = dimensions
         self.variables = variables
         self.varlist = varlist
+
+        self.name = self.source if self.name is None else self.name
 
         init_settings = {}
 
@@ -63,11 +73,12 @@ class NotebookDiagnostic:
             else:
                 init_settings[key] = None
 
-        assert isinstance(name, str), "String or valid path must be supplied"
+        assert isinstance(source, str), "String or valid path must be supplied"
 
         # load an MDTF-compatible jsonc settings file
-        if os.path.exists(name):
-            loaded_file = json_init(name)
+        if os.path.exists(source):
+            logger.info(f"Reading MDTF settings file from: {source}")
+            loaded_file = json_init(source)
             settings = loaded_file["settings"]
 
             self.dimensions = (
@@ -89,7 +100,9 @@ class NotebookDiagnostic:
             settings = {**settings, **init_settings}
             settings_keys = list(set(settings_keys + list(settings.keys())))
 
-            self.variables = [RequestedVariable(k,**v) for k,v in self.varlist.items()]
+            self.variables = [
+                RequestedVariable(k, **v) for k, v in self.varlist.items()
+            ]
 
         # case where a diagnostic is initalized directly
         else:
@@ -102,6 +115,7 @@ class NotebookDiagnostic:
         # make long_name and description identical
         if self.description is not None:
             settings["long_name"] = self.description
+            settings["description"] = self.description
         else:
             self.description = settings["long_name"]
 
@@ -177,3 +191,52 @@ class NotebookDiagnostic:
 
     def __repr__(self):
         return f"NotebookDiagnostic {self.name}"
+
+    def _repr_html_(self):
+        result = html.gen_html_sub()
+        # Table Header
+        result += f"<h3>{self.name}</h3><i>{self.description}</i>"
+        result += "<table class='cool-class-table'>"
+
+        result += f"<tr><td><strong>name</strong></td><td>{self.name}</td></tr>"
+        result += (
+            f"<tr><td><strong>description</strong></td><td>{self.description}</td></tr>"
+        )
+
+        _vars = str(", ").join([x.varname for x in self.variables])
+        result += f"<tr><td><strong>variables</strong></td><td>{_vars}</td></tr>"
+
+        result += f"<tr><td><strong>groups</strong></td><td>{self.groups}</td></tr>"
+
+        if len(self.diag_vars) > 0:
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>User-defined diag_vars</summary>"
+            result += "<div><table>"
+            for d_key in sorted(self.diag_vars.keys()):
+                d_value = self.diag_vars[d_key]
+                result += f"<tr><td>{d_key}</td><td>{d_value}</td></tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
+        if len(self.settings) > 0:
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>MDTF Settings</summary>"
+            result += "<div><table>"
+            for d_key in sorted(self.settings.keys()):
+                if d_key != "settings":
+                    d_value = self.settings[d_key]
+                    result += f"<tr><td>{d_key}</td><td>{d_value}</td></tr>"
+                else:
+                    for k in sorted(self.settings["settings"].keys()):
+                        v = self.settings["settings"][k]
+                        result += f"<tr><td>{k}</td><td>{v}</td></tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
+        result += "</table>"
+
+        return result
