@@ -34,6 +34,7 @@ class RequestedVariable:
         frequency="mon",
         ppkind="ts",
         dimensions=None,
+        **kwargs,
     ):
         # Variable name used in the analysis script
         self.path_variable = path_variable
