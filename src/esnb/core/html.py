@@ -1,4 +1,19 @@
 def gen_html_sub():
+    """
+    Generates a string containing HTML and CSS for a styled table.
+
+    Returns
+    -------
+    str
+        A string with embedded CSS styles for a table with the class
+        'cool-class-table'. The styles include border, padding, alternating row
+        colors, and custom styles for <summary> and <details> elements.
+
+    Examples
+    --------
+    >>> html = gen_html_sub()
+    >>> print(html)
+    """
     html = """
         <style>
             .cool-class-table {{

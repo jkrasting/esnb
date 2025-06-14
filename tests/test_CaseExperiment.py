@@ -1,6 +1,8 @@
 import pytest
 import intake_esm
+from importlib_resources import files
 
+import esnb
 from esnb.sites import gfdl
 
 from esnb.core.CaseExperiment2 import (
@@ -14,8 +16,8 @@ dora_url = "https://dora.gfdl.noaa.gov/api/intake/odiv-1.json"
 dora_id = "odiv-1"
 dora_id_2 = 895
 intake_url = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"
-mdtf_settings = "tests/test_data/input_timeslice_test.yml"
-intake_path = "tests/test_data/intake-uda-cmip.json"
+mdtf_settings = esnb.datasources.test_mdtf_settings
+intake_path = esnb.datasources.test_catalog_gfdl_uda
 
 
 def test_infer_case_source_dora_url():

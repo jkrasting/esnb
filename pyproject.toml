@@ -55,8 +55,17 @@ starting_version = "0.0.1"
 [tool.dynamic]
 version = "placeholder"
 
+[tool.ruff]
+exclude = [
+    "*.ipynb",
+    "CaseGroup.py",
+    "CaseExperiment.py",
+    "esnb_datastore.py",
+    "util.py",
+]
+
 [tool.setuptools.package-data]
-esnb = ["templates/"]
+esnb = ["templates/", "data/"]
 
 [tool.setuptools]
 script-files = ["scripts/nbinit"]

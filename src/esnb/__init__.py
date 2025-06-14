@@ -1,6 +1,38 @@
+import importlib.metadata as ilm
 import logging
-import sys
 import os
+import sys
+
+from . import core, datasources, sites
+from .core.CaseExperiment import CaseExperiment
+from .core.CaseExperiment2 import CaseExperiment2
+from .core.CaseGroup import CaseGroup
+from .core.CaseGroup2 import CaseGroup2
+from .core.esnb_datastore import esnb_datastore
+from .core.NotebookDiagnostic import NotebookDiagnostic
+from .core.RequestedVariable import RequestedVariable
+
+__all__ = [
+    "core",
+    "datasources",
+    "sites",
+    "CaseExperiment",
+    "CaseExperiment2",
+    "CaseGroup",
+    "CaseGroup2",
+    "esnb_datastore",
+    "NotebookDiagnostic",
+    "RequestedVariable",
+]
+
+msg = ilm.metadata("esnb")
+
+__name__ = msg["Name"]
+__version__ = msg["Version"]
+__description__ = msg["Summary"]
+__requires__ = msg["Requires-Dist"]
+__requires_python__ = msg["Requires-Python"]
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +69,7 @@ elif log_level == "ERROR":
 elif log_level == "CRITICAL":
     logger.setLevel(logging.CRITICAL)
 else:
-    raise ValueError(f"Unrecognized logging level: {level}")
+    raise ValueError(f"Unrecognized logging level: {log_level}")
 
 logger.handlers = []  # Clear existing handlers
 
@@ -53,13 +85,7 @@ formatter = ColorFormatter(format_str)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-from . import core
-
-from .core.RequestedVariable import RequestedVariable
-from .core.CaseExperiment import CaseExperiment
-from .core.CaseExperiment2 import CaseExperiment2
-from .core.NotebookDiagnostic import NotebookDiagnostic
-from .core.CaseGroup import CaseGroup
-from .core.esnb_datastore import esnb_datastore
-
-from . import sites
+# test_data_root = str(
+#    Path(importlib.util.find_spec("esnb").origin).parent.parent.parent
+#    / "tests/test_data"
+# )
