@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-import pandas as pd
 import xarray as xr
 
 from esnb.sites import gfdl

@@ -1,9 +1,11 @@
 import pytest
+import esnb
 from esnb.core import mdtf
+from importlib_resources import files
 
 
 def test_MDTFCaseSettings():
-    settings_file = "tests/test_data/input_timeslice_test.yml"
+    settings_file = esnb.datasources.test_mdtf_settings
     settings = mdtf.MDTFCaseSettings
     settings.load_mdtf_settings_file(settings, settings_file)
 

@@ -2,13 +2,39 @@ import json
 import logging
 import os
 
-logger = logging.getLogger(__name__)
-
 from . import html, util
 from .RequestedVariable import RequestedVariable
+from .util2 import flatten_list
+
+logger = logging.getLogger(__name__)
 
 
 def json_init(name):
+    """
+    Reads a JSON file, removes lines containing '//' comments, and returns the
+    parsed JSON object.
+
+    Parameters
+    ----------
+    name : str
+        The path to the JSON file to be read.
+
+    Returns
+    -------
+    dict or list
+        The parsed JSON object from the file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    json.JSONDecodeError
+        If the file content is not valid JSON after comment removal.
+
+    Notes
+    -----
+    Lines containing '//' anywhere are excluded before parsing as JSON.
+    """
     with open(name, "r") as f:
         lines = [line.strip() for line in f]
     lines = [x for x in lines if "//" not in x]
@@ -17,6 +43,53 @@ def json_init(name):
 
 
 class NotebookDiagnostic:
+    """
+    Class for managing and representing notebook diagnostics, including
+    settings, variables, groups, and metrics.
+
+    This class can be initialized from a JSON settings file or directly from
+    provided arguments. It supports serialization, metrics reporting, and
+    HTML representation for use in Jupyter notebooks.
+
+    Parameters
+    ----------
+    source : str
+        Path to the settings file or a string identifier.
+    name : str, optional
+        Name of the diagnostic.
+    description : str, optional
+        Description of the diagnostic.
+    dimensions : dict, optional
+        Dimensions associated with the diagnostic.
+    variables : list, optional
+        List of variables for the diagnostic.
+    varlist : dict, optional
+        Dictionary of variable definitions.
+    **kwargs
+        Additional keyword arguments for settings and user-defined options.
+
+    Attributes
+    ----------
+    source : str
+        Source path or identifier.
+    name : str
+        Name of the diagnostic.
+    description : str
+        Description of the diagnostic.
+    dimensions : dict
+        Dimensions of the diagnostic.
+    variables : list
+        List of RequestedVariable objects.
+    varlist : dict
+        Dictionary of variable definitions.
+    diag_vars : dict
+        User-defined diagnostic variables.
+    groups : list
+        List of diagnostic groups.
+    _settings_keys : list
+        List of settings keys.
+    """
+
     def __init__(
         self,
         source,
@@ -27,6 +100,26 @@ class NotebookDiagnostic:
         varlist=None,
         **kwargs,
     ):
+        """
+        Initialize a NotebookDiagnostic object from a settings file or arguments.
+
+        Parameters
+        ----------
+        source : str
+            Path to the settings file or a string identifier.
+        name : str, optional
+            Name of the diagnostic.
+        description : str, optional
+            Description of the diagnostic.
+        dimensions : dict, optional
+            Dimensions associated with the diagnostic.
+        variables : list, optional
+            List of variables for the diagnostic.
+        varlist : dict, optional
+            Dictionary of variable definitions.
+        **kwargs
+            Additional keyword arguments for settings and user-defined options.
+        """
         logger.info(f"Initalizing NotebookDiagnostic object from {source}")
         self.source = source
         self.description = description
@@ -114,6 +207,15 @@ class NotebookDiagnostic:
 
     @property
     def metrics(self):
+        """
+        Return a dictionary containing diagnostic metrics and dimensions.
+
+        Returns
+        -------
+        dict
+            Dictionary with 'DIMENSIONS' and 'RESULTS' keys representing
+            metric dimensions and results.
+        """
         dimensions = {"json_structure": ["region", "model", "metric"]}
         results = {"Global": {group.name: group.metrics for group in self.groups}}
         metrics = {
@@ -122,7 +224,40 @@ class NotebookDiagnostic:
         }
         return metrics
 
+    def resolve2(self, groups):
+        """
+        Resolve variables for each group and assign groups to the diagnostic.
+
+        Parameters
+        ----------
+        groups : list
+            List of group objects to resolve and assign.
+        """
+        self.groups = groups
+        _ = [x.resolve(self.variables) for x in self.groups]
+
+    @property
+    def files2(self):
+        """
+        Return a sorted list of files from all groups.
+
+        Returns
+        -------
+        list
+            Sorted list of file paths from all groups.
+        """
+        return sorted(flatten_list([x.files for x in self.groups]))
+
     def write_metrics(self, filename=None):
+        """
+        Write diagnostic metrics to a JSON file.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Output filename. If None, uses a cleaned version of the diagnostic
+            name with '.json' extension.
+        """
         print(json.dumps(self.metrics, indent=2))
         filename = (
             util.clean_string(self.name) + ".json" if filename is None else filename
@@ -133,6 +268,14 @@ class NotebookDiagnostic:
 
     @property
     def settings(self):
+        """
+        Return a dictionary of diagnostic settings and metadata.
+
+        Returns
+        -------
+        dict
+            Dictionary containing settings, varlist, dimensions, and diag_vars.
+        """
         result = {"settings": {}}
         for key in self._settings_keys:
             result["settings"][key] = self.__dict__[key]
@@ -143,6 +286,14 @@ class NotebookDiagnostic:
 
     @property
     def files(self):
+        """
+        Return a sorted list of all files from all cases in all groups.
+
+        Returns
+        -------
+        list
+            Sorted list of file paths from all cases in all groups.
+        """
         all_files = []
         for group in self.groups:
             for case in group.cases:
@@ -151,30 +302,85 @@ class NotebookDiagnostic:
 
     @property
     def dsets(self):
+        """
+        Return a list of datasets from all groups.
+
+        Returns
+        -------
+        list
+            List of datasets from each group.
+        """
         return [x.ds for x in self.groups]
 
     def dump(self, filename="settings.json", type="json"):
+        """
+        Dump diagnostic settings to a file in the specified format.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Output filename. Default is 'settings.json'.
+        type : str, optional
+            Output format. Currently only 'json' is supported.
+        """
         if type == "json":
             filename = f"{filename}"
             with open(filename, "w") as f:
                 json.dump(self.settings, f, indent=2)
 
     def dmget(self, status=False):
+        """
+        Call the dmget method for all groups.
+
+        Parameters
+        ----------
+        status : bool, optional
+            Status flag to pass to each group's dmget method.
+        """
         _ = [x.dmget(status=status) for x in self.groups]
 
     def load(self):
+        """
+        Load all groups by calling their load method.
+        """
         _ = [x.load() for x in self.groups]
 
     def resolve(self, groups=None):
+        """
+        Resolve datasets for the provided groups and assign them to the
+        diagnostic.
+
+        Parameters
+        ----------
+        groups : list or None, optional
+            List of groups to resolve. If None, uses an empty list.
+        """
         groups = [] if groups is None else groups
         groups = [groups] if not isinstance(groups, list) else groups
         self.groups = groups
         _ = [x.resolve_datasets(self) for x in self.groups]
 
     def __repr__(self):
+        """
+        Return a string representation of the NotebookDiagnostic object.
+
+        Returns
+        -------
+        str
+            String representation.
+        """
         return f"NotebookDiagnostic {self.name}"
 
     def _repr_html_(self):
+        """
+        Return an HTML representation of the NotebookDiagnostic for Jupyter
+        display.
+
+        Returns
+        -------
+        str
+            HTML string representing the diagnostic.
+        """
         result = html.gen_html_sub()
         # Table Header
         result += f"<h3>{self.name}</h3><i>{self.description}</i>"

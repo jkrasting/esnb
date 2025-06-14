@@ -1,6 +1,10 @@
 import os
 import pytest
+import esnb
 from esnb import NotebookDiagnostic
+from importlib_resources import files
+
+pod_settings_file = esnb.datasources.test_mdtf_pod_settings
 
 
 def test_init_from_func():
@@ -12,7 +16,7 @@ def test_init_from_func():
 
 
 def test_init_from_file():
-    diag = NotebookDiagnostic("tests/test_data/settings.jsonc")
+    diag = NotebookDiagnostic(pod_settings_file)
     assert "settings" in diag.settings.keys()
     assert "varlist" in diag.settings.keys()
     assert "dimensions" in diag.settings.keys()
@@ -22,7 +26,7 @@ def test_init_from_file():
 
 
 def test_settings_dump():
-    diag = NotebookDiagnostic("tests/test_data/settings.jsonc")
+    diag = NotebookDiagnostic(pod_settings_file)
     diag.dump("dumped_settings.json")
     assert os.path.exists("dumped_settings.json")
     # TODO - check something in the file
