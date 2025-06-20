@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "importlib_metadata <5.0.0",
+    "importlib-resources",
     "intake",
     "intake_esm",
     "momgrid",
