@@ -1,10 +1,12 @@
 import json
 import logging
 import os
+import warnings
 
 from . import html, util
 from .RequestedVariable import RequestedVariable
 from .util2 import flatten_list
+from esnb.sites import gfdl
 
 logger = logging.getLogger(__name__)
 
@@ -224,30 +226,6 @@ class NotebookDiagnostic:
         }
         return metrics
 
-    def resolve2(self, groups):
-        """
-        Resolve variables for each group and assign groups to the diagnostic.
-
-        Parameters
-        ----------
-        groups : list
-            List of group objects to resolve and assign.
-        """
-        self.groups = groups
-        _ = [x.resolve(self.variables) for x in self.groups]
-
-    @property
-    def files2(self):
-        """
-        Return a sorted list of files from all groups.
-
-        Returns
-        -------
-        list
-            Sorted list of file paths from all groups.
-        """
-        return sorted(flatten_list([x.files for x in self.groups]))
-
     def write_metrics(self, filename=None):
         """
         Write diagnostic metrics to a JSON file.
@@ -294,11 +272,15 @@ class NotebookDiagnostic:
         list
             Sorted list of file paths from all cases in all groups.
         """
-        all_files = []
-        for group in self.groups:
-            for case in group.cases:
-                all_files = all_files + case.catalog.files
-        return sorted(all_files)
+        if hasattr(self.groups[0], "resolve_datasets"):
+            # warnings.warn("Legacy CaseGroup object found.  Make sure you are using the latest version of ESNB.", DeprecationWarning, stacklevel=2)
+            all_files = []
+            for group in self.groups:
+                for case in group.cases:
+                    all_files = all_files + case.catalog.files
+            return sorted(all_files)
+        else:
+            return sorted(flatten_list([x.files for x in self.groups]))
 
     @property
     def dsets(self):
@@ -337,7 +319,11 @@ class NotebookDiagnostic:
         status : bool, optional
             Status flag to pass to each group's dmget method.
         """
-        _ = [x.dmget(status=status) for x in self.groups]
+        if hasattr(self.groups[0], "dmget"):
+            # warnings.warn("Legacy CaseGroup object found.  Make sure you are using the latest version of ESNB.", DeprecationWarning, stacklevel=2)
+            _ = [x.dmget(status=status) for x in self.groups]
+        else:
+            gfdl.call_dmget(self.files, status=status)
 
     def load(self):
         """
@@ -358,7 +344,11 @@ class NotebookDiagnostic:
         groups = [] if groups is None else groups
         groups = [groups] if not isinstance(groups, list) else groups
         self.groups = groups
-        _ = [x.resolve_datasets(self) for x in self.groups]
+        if hasattr(self.groups[0], "resolve_datasets"):
+            # warnings.warn("Legacy CaseGroup object found.  Make sure you are using the latest version of ESNB.", DeprecationWarning, stacklevel=2)
+            _ = [x.resolve_datasets(self) for x in self.groups]
+        else:
+            _ = [x.resolve(self.variables) for x in self.groups]
 
     def __repr__(self):
         """
