@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import warnings
 
 from esnb.core.util2 import case_time_filter, flatten_list, initialize_cases_from_source
 
@@ -131,7 +132,7 @@ def filter_catalog(catalog, variable):
 
 class CaseGroup2:
     """
-    CaseGroup2(source, name=None, description=None, concat_dim=None, date_range=None)
+    CaseGroup2(source, name=None, description=None, concat_dim=None, date_range=None, **kwargs)
 
     A group of case objects with shared metadata and catalog management.
 
@@ -166,7 +167,13 @@ class CaseGroup2:
     """
 
     def __init__(
-        self, source, name=None, description=None, concat_dim=None, date_range=None
+        self,
+        source,
+        concat_dim=None,
+        name=None,
+        date_range=None,
+        description=None,
+        **kwargs,
     ):
         """
         Initialize a CaseGroup2 object.
@@ -192,6 +199,14 @@ class CaseGroup2:
         Initializes metadata and loads cases from the provided source(s). If a
         date range is specified, filters the cases accordingly.
         """
+
+        if "verbose" in kwargs.keys():
+            warnings.warn(
+                "`verbose` is no longer supported, remove this keyword argument. Future versions will fail if it is used.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         self.source = source
         self.name = name
         self.description = description
