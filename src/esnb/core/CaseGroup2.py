@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import warnings
 
+import esnb
 from esnb.core.util2 import case_time_filter, flatten_list, initialize_cases_from_source
 
 from . import html

@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import warnings
+# import warnings
 
 from . import html, util
 from .RequestedVariable import RequestedVariable
