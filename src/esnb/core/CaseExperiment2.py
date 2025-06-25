@@ -358,3 +358,9 @@ class CaseExperiment2(MDTFCaseSettings):
         result += "</table>"
 
         return result
+
+    def __hash__(self):
+        return hash((self.name, self.source))
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()

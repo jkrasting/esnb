@@ -251,10 +251,18 @@ class RequestedVariable:
         result += "<table class='cool-class-table'>"
 
         inactive = {}
+        display_keys = [
+            "frequency",
+            "ppkind",
+            "preferred_chunkfreq",
+            "preferred_realm",
+            "varname",
+        ]
         for k in sorted(self.__dict__.keys()):
             val = self.__dict__[k]
             if val is not None:
-                result += f"<tr><td><strong>{k}</strong></td><td>{val}</td></tr>"
+                if k in display_keys:
+                    result += f"<tr><td><strong>{k}</strong></td><td>{val}</td></tr>"
             else:
                 inactive[k] = val
 
@@ -269,6 +277,17 @@ class RequestedVariable:
             result += "</table></div>"
             result += "</details>"
             result += "</td></tr>"
+
+        if hasattr(self, "datasets"):
+            for group in self.datasets.keys():
+                result += "<tr><td colspan='2'>"
+                result += "<details>"
+                result += f"<summary>Xarray Datasets ({group.name})</summary>"
+                result += "<div><table>"
+                result += f"<tr><td>{self.datasets[group]._repr_html_()}</td></tr>"
+                result += "</table></div>"
+                result += "</details>"
+                result += "</td></tr>"
 
         return result
 
@@ -295,3 +314,16 @@ class RequestedVariable:
             The variable name (`varname`) of the RequestedVariable instance.
         """
         return str(self.varname)
+
+    def __hash__(self):
+        hashables = []
+        acceptable_keys = ["varname", "source_varname", "frequency"]
+        for k in sorted(list(self.__dict__.keys())):
+            if k in acceptable_keys:
+                v = self.__dict__[k]
+                v = tuple(v) if isinstance(v, list) else v
+                hashables.append(v)
+        return hash(tuple(hashables))
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()

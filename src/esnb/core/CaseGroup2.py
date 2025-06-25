@@ -10,6 +10,23 @@ from .util2 import merge_intake_catalogs
 logger = logging.getLogger(__name__)
 
 
+def infer_casegroup_name(group):
+    names = [x.name for x in group.cases]
+    return str(" + ").join(names)
+
+
+def test_infer_casegroup_name():
+    group1 = esnb.CaseGroup2(esnb.datasources.test_catalog_esm4_ctrl)
+    group2 = esnb.CaseGroup2(
+        [
+            esnb.datasources.test_catalog_esm4_hist,
+            esnb.datasources.test_catalog_esm4_futr,
+        ]
+    )
+    assert infer_casegroup_name(group2) == "ESM4_historical + ESM4_SSP5-8.5"
+    assert infer_casegroup_name(group1) == "ESM4_control"
+
+
 def shorten_string(source, convert_path=False):
     """
     Shortens a string or file path for display purposes.
@@ -102,9 +119,15 @@ def filter_catalog(catalog, variable):
     if nrealm > 1:
         realms = list(set(list(_cat.df["realm"])))
         preferred_realms = variable.preferred_realm
-        if "ocean_month" in preferred_realms:
+        if (
+            "ocean_month" in preferred_realms
+            and "ocean_monthly" not in preferred_realms
+        ):
             preferred_realms.append("ocean_monthly")
-        elif "ocean_monthly" in preferred_realms:
+        elif (
+            "ocean_monthly" in preferred_realms
+            and "ocean_month" not in preferred_realms
+        ):
             preferred_realms.append("ocean_month")
         else:
             preferred_realms = preferred_realms
@@ -227,6 +250,8 @@ class CaseGroup2:
                 f"Filtering individual case catalogs by date range: {date_range}"
             )
             _ = [case_time_filter(x, date_range) for x in flatten_list(self.cases)]
+
+        self.name = infer_casegroup_name(self) if self.name is None else self.name
 
     @property
     def files(self):
@@ -351,3 +376,16 @@ class CaseGroup2:
         result += "</table>"
 
         return result
+
+    def __hash__(self):
+        hashables = []
+        acceptable_keys = ["cases", "name", "source"]
+        for k in sorted(list(self.__dict__.keys())):
+            if k in acceptable_keys:
+                v = self.__dict__[k]
+                v = tuple(v) if isinstance(v, list) else v
+                hashables.append(v)
+        return hash(tuple(hashables))
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()
