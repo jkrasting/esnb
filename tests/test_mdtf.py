@@ -1,7 +1,7 @@
 import pytest
+
 import esnb
 from esnb.core import mdtf
-from importlib_resources import files
 
 
 def test_MDTFCaseSettings():

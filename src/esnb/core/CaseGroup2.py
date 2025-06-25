@@ -1,12 +1,13 @@
 import logging
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import esnb
 from esnb.core.util2 import case_time_filter, flatten_list, initialize_cases_from_source
 
 from . import html
-from .util2 import merge_intake_catalogs
+from .util_catalog import merge_intake_catalogs
+from .VirtualDataset import resolve_dataset_refs
 
 logger = logging.getLogger(__name__)
 
@@ -306,6 +307,10 @@ class CaseGroup2:
             case.catalog = merged[n]
         self.is_resolved = True
 
+    @property
+    def datasets(self):
+        return resolve_dataset_refs(self._datasets)
+
     def __str__(self):
         """
         Returns the string representation of the object.
@@ -338,7 +343,7 @@ class CaseGroup2:
         )
         return res
 
-    def _repr_html_(self):
+    def _repr_html_(self, title=True):
         """
         Generate an HTML representation of the object for Jupyter display.
 
@@ -353,7 +358,6 @@ class CaseGroup2:
             An HTML string representing the object, suitable for display in
             Jupyter notebooks.
         """
-        result = html.gen_html_sub()
 
         def color_logical(var):
             if var is True:
@@ -362,8 +366,13 @@ class CaseGroup2:
                 result = f"<span style='color: red;'>{var}</span>"
             return result
 
-        result += f"<h3>{self.__class__.__name__}  --  {self.name}</h3><i>{self.description}</i>"
-        result += "<table class='cool-class-table'>"
+        if title:
+            result = html.gen_html_sub()
+            result += f"<h3>{self.__class__.__name__}  --  {self.name}</h3><i>{self.description}</i>"
+            result += "<table class='cool-class-table'>"
+        else:
+            result = ""
+
         result += f"<tr><td><strong>source</strong></td><td>{self.source}</td></tr>"
         result += (
             f"<tr><td><strong>date_range</strong></td><td>{self.date_range}</td></tr>"
@@ -374,7 +383,27 @@ class CaseGroup2:
         result += f"<tr><td><strong>is_resolved</strong></td><td>{color_logical(self.is_resolved)}</td></tr>"
         result += f"<tr><td><strong>is_loaded</strong></td><td>{color_logical(self.is_loaded)}</td></tr>"
         result += f"<tr><td><strong>cases</strong></td><td>{self.cases}</td></tr>"
-        result += "</table>"
+
+        if hasattr(self, "datasets"):
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>Xarray Datasets</summary>"
+            result += "<div><table>"
+            for var in self.datasets.keys():
+                result += "<tr><td colspan='2'>"
+                result += "<details>"
+                result += f"<summary>({var.varname})</summary>"
+                result += "<div><table>"
+                result += f"<tr><td>{self.datasets[var]._repr_html_()}</td></tr>"
+                result += "</table></div>"
+                result += "</details>"
+                result += "</td></tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
+        if title:
+            result += "</table>"
 
         return result
 

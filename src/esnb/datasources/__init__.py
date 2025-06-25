@@ -17,5 +17,8 @@ test_catalog_gfdl_uda = str(files("esnb.data") / "intake-uda-cmip.json")
 test_mdtf_settings = str(files("esnb.data") / "input_timeslice_test.yml")
 test_mdtf_pod_settings = str(files("esnb.data") / "settings.jsonc")
 
+# -- blank catalog
+blank_catalog = str(files("esnb.data") / "blank_catalog.json")
+
 # -- pangeo catalog
 cmip6_pangeo = "https://storage.googleapis.com/cmip6/pangeo-cmip6.json"

@@ -1,16 +1,13 @@
-import pytest
 import intake_esm
-from importlib_resources import files
+import pytest
 
 import esnb
-from esnb.sites import gfdl
-
 from esnb.core.CaseExperiment2 import (
-    CaseExperiment2,
     infer_case_source,
     open_intake_catalog,
     open_intake_catalog_dora,
 )
+from esnb.sites import gfdl
 
 dora_url = "https://dora.gfdl.noaa.gov/api/intake/odiv-1.json"
 dora_id = "odiv-1"

@@ -3,8 +3,10 @@ import logging
 import os
 # import warnings
 
+import xarray as xr
 from . import html, util
 from .RequestedVariable import RequestedVariable
+from .VirtualDataset import VirtualDataset
 from .util2 import flatten_list
 from esnb.sites import gfdl
 
@@ -133,6 +135,9 @@ class NotebookDiagnostic:
         self.name = self.source if self.name is None else self.name
 
         init_settings = {}
+
+        # Needed for tracked list
+        self._observers = {}
 
         # initialze empty default settings
         settings_keys = [
@@ -325,11 +330,104 @@ class NotebookDiagnostic:
         else:
             gfdl.call_dmget(self.files, status=status)
 
-    def load(self):
+    def load(self, site="gfdl"):
         """
         Load all groups by calling their load method.
         """
-        _ = [x.load() for x in self.groups]
+        if hasattr(self.groups[0], "dmget"):
+            _ = [x.load() for x in self.groups]
+        else:
+            self.loader(site=site)
+
+    def loader(self, site="gfdl"):
+        diag = self
+        groups = diag.groups
+        variables = diag.variables
+
+        xr_merge_opts = {"coords": "minimal", "compat": "override"}
+
+        if site == "gfdl":
+            gfdl.call_dmget(diag.files)
+
+        def _open_xr(files, varname=None):
+            time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
+            _ds = xr.open_mfdataset(
+                files, decode_times=time_coder, decode_timedelta=True, **xr_merge_opts
+            )
+            if varname is not None:
+                ds = xr.Dataset()
+                ds[varname] = _ds[varname]
+                ds.attrs = dict(_ds.attrs)
+            else:
+                ds = _ds
+            return ds
+
+        # dictionary of datasets by var then group
+        all_datasets = []
+        counter = 0
+        ds_by_var = {}
+        for var in variables:
+            ds_by_var[var] = {}
+            for group in groups:
+                concat_dim = getattr(group, "concat_dim", None)
+                # print(var, group, concat_dim)
+                ncases = len(group.cases)
+                if ncases > 1:
+                    assert concat_dim is not None, (
+                        f"Multiple cases discovered in group {group} but no concat_dim found"
+                    )
+
+                files = []
+                for case in group.cases:
+                    # print(f"  - {case}")
+                    files.append(
+                        list(case.catalog.search(variable_id=var.varname).df["path"])
+                    )
+
+                dsets = [_open_xr(x, var.varname) for x in files]
+
+                if len(dsets) > 1:
+                    ds = xr.concat(dsets, concat_dim)
+                else:
+                    ds = dsets[0]
+
+                # Select date range
+                tcoord = "time"
+                ds = ds.sel({tcoord: slice(*group.date_range)})
+
+                ds = VirtualDataset(ds)
+                all_datasets.append(ds)
+                ds_by_var[var][group] = ds
+                counter = counter + 1
+
+        # dictionary of datasets by group then var
+        ds_by_group = {}
+        for var in ds_by_var.keys():
+            for group in ds_by_var[var].keys():
+                if group not in ds_by_group.keys():
+                    ds_by_group[group] = {}
+                ds_by_group[group][var] = ds_by_var[var][group]
+
+        # assign datasets back to their group and variable objects
+        for group in ds_by_group.keys():
+            group._datasets = ds_by_group[group]
+
+        for var in ds_by_var.keys():
+            var._datasets = ds_by_var[var]
+
+        # set group loaded status
+        for group in ds_by_group.keys():
+            group.is_loaded = True
+
+        # set top-level datasets
+        self._datasets = all_datasets
+
+    @property
+    def datasets(self):
+        return [x.dataset for x in self._datasets]
+
+    def access_dataset(self, id=0):
+        return self.datasets[id]
 
     def resolve(self, groups=None):
         """
@@ -383,8 +481,18 @@ class NotebookDiagnostic:
 
         _vars = str(", ").join([x.varname for x in self.variables])
         result += f"<tr><td><strong>variables</strong></td><td>{_vars}</td></tr>"
+        _grps = str("<br>").join([x.name for x in self.groups])
+        result += f"<tr><td><strong>groups</strong></td><td>{_grps}</td></tr>"
 
-        result += f"<tr><td><strong>groups</strong></td><td>{self.groups}</td></tr>"
+        # result += "<tr><td colspan='2'>"
+        # result += "<details>"
+        # result += "<summary>Group Details</summary>"
+        # result += "<div><table>"
+        # for grp in self.groups:
+        #     result += f"<tr>{grp._repr_html_(title=False)}</tr>"
+        # result += "</table></div>"
+        # result += "</details>"
+        # result += "</td></tr>"
 
         if len(self.diag_vars) > 0:
             result += "<tr><td colspan='2'>"
@@ -414,6 +522,27 @@ class NotebookDiagnostic:
             result += "</table></div>"
             result += "</details>"
             result += "</td></tr>"
+
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>Variable Details</summary>"
+            result += "<div><table>"
+            for var in self.variables:
+                result += f"<tr>{var._repr_html_(title=False)}</tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>CaseGroup Details</summary>"
+            result += "<div><table>"
+            for group in self.groups:
+                result += f"<tr>{group._repr_html_(title=False)}</tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+            result += "</table>"
 
         result += "</table>"
 
