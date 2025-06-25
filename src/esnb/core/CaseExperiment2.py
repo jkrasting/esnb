@@ -1,196 +1,16 @@
-import json
 import logging
 from pathlib import Path
 
-import intake
 import intake_esm
-from esnb import sites
+
 from esnb.core.mdtf import MDTFCaseSettings
+from esnb.sites.gfdl import open_intake_catalog_dora
 
 from . import html, util
+from .util_case import infer_case_source
+from .util_catalog import open_intake_catalog
 
 logger = logging.getLogger(__name__)
-
-
-def infer_case_source(source):
-    """
-    Infers the type of a given case source and returns its mode.
-
-    Parameters
-    ----------
-    source : str or int
-        The source to be inferred. This can be a string representing a Dora ID,
-        a URL, a local file path, or a project-level Dora ID, or an integer
-        representing a Dora ID.
-
-    Returns
-    -------
-    mode : str
-        The inferred mode of the source. Possible values include:
-        - 'dora_id': Dora ID (numeric or project-level)
-        - 'dora_url': URL pointing to Dora
-        - 'intake_url': URL suggesting an intake catalog
-        - 'path': Local file path
-        - 'pp_dir': Directory containing post-processing (raises NotImplementedError)
-        - 'intake_path': Local JSON file assumed to be an intake catalog
-        - 'mdtf_settings': Local file assumed to be an MDTF settings file
-
-    Raises
-    ------
-    ValueError
-        If the source type is unsupported.
-    FileNotFoundError
-        If the provided path does not exist.
-    NotImplementedError
-        If the supplied path is a directory (future support planned).
-    """
-    if isinstance(source, str):
-        if source.isnumeric():
-            logger.debug(f"Found source string with numeric Dora ID - {source}")
-            mode = "dora_id"
-        elif source.startswith("http") or source.startswith("https"):
-            if "dora.gfdl" in source:
-                logger.debug(f"Found source url pointing to Dora - {source}")
-                mode = "dora_url"
-            else:
-                logger.debug(f"Found source url suggesting intake catalog - {source}")
-                mode = "intake_url"
-        elif "-" in source:
-            if source.split("-")[1].isnumeric():
-                logger.debug(
-                    f"Found source string with project-level dora ID - {source}"
-                )
-                mode = "dora_id"
-            else:
-                mode = "path"
-        else:
-            mode = "path"
-    elif isinstance(source, int):
-        logger.debug(f"Found source integer suggesting dora ID - {source}")
-        mode = "dora_id"
-    else:
-        raise ValueError(
-            "Unsupported source type. Must be path or url to"
-            + " intake_esm catalog, MDTF settings file, or DORA ID"
-        )
-
-    if mode == "path":
-        logger.debug(f"Assuming source is a local file path - {source}")
-        filepath = Path(source)
-        if not filepath.exists():
-            logger.error(f"Path {filepath} does not exist")
-            raise FileNotFoundError(f"Path {filepath} does not exist")
-        if filepath.is_dir():
-            mode = "pp_dir"
-            logger.debug(
-                "Supplied path appears to be a directory, possibly containing post-processing"
-            )
-            err = "The supplied path is a directory. In the future, support will be added to generate a catalog."
-            logger.error(err)
-            raise NotImplementedError(err)
-        else:
-            try:
-                with open(filepath, "r") as f:
-                    json.load(f)
-                logger.debug(
-                    "Source appears to be a JSON file, assuming intake catalog"
-                )
-                mode = "intake_path"
-            except json.JSONDecodeError:
-                logger.debug("Source is not a JSON file, assuming MDTF settings file")
-                mode = "mdtf_settings"
-
-    return mode
-
-
-def open_intake_catalog(source, mode):
-    """
-    Opens an intake catalog from a given source using the specified mode.
-
-    Parameters
-    ----------
-    source : str
-        The path or URL to the intake catalog to be opened.
-    mode : str
-        The mode specifying how to open the catalog. Must be either
-        "intake_url" to fetch from a URL or "intake_path" to open from a
-        local file.
-
-    Returns
-    -------
-    catalog : intake.ESMDataStore
-        The opened intake catalog object.
-
-    Raises
-    ------
-    RuntimeError
-        If an unrecognized mode is provided.
-
-    Notes
-    -----
-    Requires the `intake` package and a properly configured logger.
-    """
-    if mode == "intake_url":
-        logger.info(f"Fetching intake catalog from url: {source}")
-        catalog = intake.open_esm_datastore(source)
-
-    elif mode == "intake_path":
-        logger.info(f"Opening intake catalog from file: {source}")
-        catalog = intake.open_esm_datastore(source)
-
-    else:
-        err = f"Encountered unrecognized source mode: {mode}"
-        loggger.error(err)  # noqa
-        raise RuntimeError(err)
-
-    return catalog
-
-
-def open_intake_catalog_dora(source, mode):
-    """
-    Opens an intake ESM datastore catalog from a specified source and mode.
-
-    Parameters
-    ----------
-    source : str
-        The source identifier. If `mode` is "dora_url", this should be the full
-        URL to the intake catalog. If `mode` is "dora_id", this should be the
-        identifier used to construct the catalog URL.
-    mode : str
-        The mode specifying how to interpret `source`. Must be either "dora_url"
-        to use `source` as a direct URL, or "dora_id" to construct the URL from
-        a known pattern.
-
-    Returns
-    -------
-    catalog : intake.ESMDataStore
-        The opened intake ESM datastore catalog.
-
-    Raises
-    ------
-    RuntimeError
-        If an unrecognized `mode` is provided.
-
-    Notes
-    -----
-    Logs the process of fetching the catalog and checks network availability to
-    the Dora service.
-    """
-    if mode == "dora_url":
-        url = source
-    elif mode == "dora_id":
-        url = f"https://{sites.gfdl.dora_hostname}/api/intake/{source}.json"
-    else:
-        err = f"Encountered unrecognized source mode: {mode}"
-        loggger.error(err)  # noqa
-        raise RuntimeError(err)
-
-    logger.info(f"Fetching intake catalog from url: {url}")
-    if not sites.gfdl.dora:
-        logger.critical("Network route to dora is unavailble. Check connection.")
-    catalog = intake.open_esm_datastore(url)
-
-    return catalog
 
 
 class CaseExperiment2(MDTFCaseSettings):
@@ -217,7 +37,7 @@ class CaseExperiment2(MDTFCaseSettings):
       multiple cases.
     """
 
-    def __init__(self, source, verbose=True):
+    def __init__(self, source, name=None, verbose=True):
         """
         Initialize a CaseExperiment2 instance by loading and validating the provided
         source, which may be an MDTF settings file, an intake catalog, or a DORA
@@ -247,6 +67,7 @@ class CaseExperiment2(MDTFCaseSettings):
         """
         self.source = source
         self.mode = infer_case_source(self.source)
+        self.name = name
 
         # Read the MDTF settings case file
         if self.mode == "mdtf_settings":
@@ -259,7 +80,11 @@ class CaseExperiment2(MDTFCaseSettings):
                     "Multiple cases found in MDTF settings file. "
                     + "Please initialize using the `CaseGroup` class."
                 )
-            self.name = list(self.mdtf_settings["case_list"].keys())[0]
+            self.name = (
+                list(self.mdtf_settings["case_list"].keys())[0]
+                if self.name is None
+                else self.name
+            )
 
             catalog_file = Path(self.catalog)
             logger.debug(
@@ -277,12 +102,27 @@ class CaseExperiment2(MDTFCaseSettings):
                 self.catalog = open_intake_catalog(self.source, self.mode)
             elif "dora" in self.mode:
                 self.catalog = open_intake_catalog_dora(self.source, self.mode)
-            self.name = self.catalog.__dict__["esmcat"].__dict__["id"]
+            self.name = (
+                self.catalog.__dict__["esmcat"].__dict__["id"]
+                if self.name is None
+                else self.name
+            )
+
+        elif self.mode == "catalog_object":
+            self.catalog = self.source
+            self.source = "Intake ESM Catalog Object"
+            self.name = (
+                self.catalog.__dict__["esmcat"].__dict__["id"]
+                if self.name is None
+                else self.name
+            )
 
         else:
             err = f"Encountered unrecognized source mode: {self.mode}"
-            loggger.error(err)  # noqa
+            logger.error(err)
             raise RuntimeError(err)
+
+        self.name = "Generic Case" if self.name is None else self.name
 
         # Convert catalog `time_range` to tuple of datetime objects
         if isinstance(self.catalog, intake_esm.core.esm_datastore):

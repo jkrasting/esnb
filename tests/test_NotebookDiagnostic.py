@@ -1,8 +1,7 @@
 import os
-import pytest
+
 import esnb
 from esnb import NotebookDiagnostic
-from importlib_resources import files
 
 pod_settings_file = esnb.datasources.test_mdtf_pod_settings
 

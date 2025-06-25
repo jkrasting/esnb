@@ -9,9 +9,17 @@ import os
 import socket
 import subprocess
 
+import intake
+
 from esnb.core.esnb_datastore import esnb_datastore
 
-__all__ = ["dora", "is_host_reachable", "call_dmget", "load_dora_catalog"]
+__all__ = [
+    "dora",
+    "is_host_reachable",
+    "call_dmget",
+    "load_dora_catalog",
+    "open_intake_catalog_dora",
+]
 
 try:
     import doralite
@@ -121,6 +129,53 @@ def load_dora_catalog(idnum, **kwargs):
     return esnb_datastore(
         doralite.catalog(idnum).__dict__["_captured_init_args"][0], **kwargs
     )
+
+
+def open_intake_catalog_dora(source, mode):
+    """
+    Opens an intake ESM datastore catalog from a specified source and mode.
+
+    Parameters
+    ----------
+    source : str
+        The source identifier. If `mode` is "dora_url", this should be the full
+        URL to the intake catalog. If `mode` is "dora_id", this should be the
+        identifier used to construct the catalog URL.
+    mode : str
+        The mode specifying how to interpret `source`. Must be either "dora_url"
+        to use `source` as a direct URL, or "dora_id" to construct the URL from
+        a known pattern.
+
+    Returns
+    -------
+    catalog : intake.ESMDataStore
+        The opened intake ESM datastore catalog.
+
+    Raises
+    ------
+    RuntimeError
+        If an unrecognized `mode` is provided.
+
+    Notes
+    -----
+    Logs the process of fetching the catalog and checks network availability to
+    the Dora service.
+    """
+    if mode == "dora_url":
+        url = source
+    elif mode == "dora_id":
+        url = f"https://{dora_hostname}/api/intake/{source}.json"
+    else:
+        err = f"Encountered unrecognized source mode: {mode}"
+        loggger.error(err)  # noqa
+        raise RuntimeError(err)
+
+    logger.info(f"Fetching intake catalog from url: {url}")
+    if not dora:
+        logger.critical("Network route to dora is unavailble. Check connection.")
+    catalog = intake.open_esm_datastore(url)
+
+    return catalog
 
 
 dora_hostname = os.environ.get("ESNB_GFDL_DORA_HOSTNAME", "dora.gfdl.noaa.gov")

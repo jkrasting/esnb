@@ -1,4 +1,5 @@
 from . import html
+from .VirtualDataset import resolve_dataset_refs
 
 
 class RequestedVariable:
@@ -22,7 +23,7 @@ class RequestedVariable:
     units : str, optional
         Units of the variable.
     preferred_chunkfreq : list of str or str, optional
-        Preferred chunking frequencies, e.g., ["5yr", "2yr", "1yr", "20yr"].
+        Preferred chunking frequencies, e.g., ["5yr", "2yr", "1yr", "20yr", "unknown"].
     frequency : str, optional
         Frequency of the data (e.g., 'mon' for monthly). Default is "mon".
     ppkind : str, optional
@@ -82,7 +83,7 @@ class RequestedVariable:
         standard_name=None,
         source_varname=None,
         units=None,
-        preferred_chunkfreq=["5yr", "2yr", "1yr", "20yr"],
+        preferred_chunkfreq=["5yr", "2yr", "1yr", "20yr", "unknown"],
         frequency="mon",
         ppkind="ts",
         dimensions=None,
@@ -108,7 +109,7 @@ class RequestedVariable:
         units : str, optional
             Units of the variable.
         preferred_chunkfreq : list of str or str, optional
-            Preferred chunking frequencies, by default ["5yr", "2yr", "1yr", "20yr"].
+            Preferred chunking frequencies, by default ["5yr", "2yr", "1yr", "20yr", "unknown"].
         frequency : str, optional
             Frequency of the variable (e.g., 'mon' for monthly), by default "mon".
         ppkind : str, optional
@@ -198,6 +199,10 @@ class RequestedVariable:
         }
 
     @property
+    def datasets(self):
+        return resolve_dataset_refs(self._datasets)
+
+    @property
     def search_options(self):
         """
         Constructs a dictionary of search options for the requested variable.
@@ -227,7 +232,7 @@ class RequestedVariable:
             result["preferred_chunkfreq"] = self.preferred_chunkfreq
         return result
 
-    def _repr_html_(self):
+    def _repr_html_(self, title=True):
         """
         Generate an HTML representation of the object for Jupyter display.
 
@@ -245,10 +250,13 @@ class RequestedVariable:
         rich HTML display of the object's state. The table includes the class
         name and variable name as a header.
         """
-        result = html.gen_html_sub()
         # Table Header
-        result += f"<h3>{self.__class__.__name__}  --  {self.varname}</h3>"
-        result += "<table class='cool-class-table'>"
+        if title:
+            result = html.gen_html_sub()
+            result += f"<h3>{self.__class__.__name__}  --  {self.varname}</h3>"
+            result += "<table class='cool-class-table'>"
+        else:
+            result = ""
 
         inactive = {}
         display_keys = [
@@ -279,15 +287,25 @@ class RequestedVariable:
             result += "</td></tr>"
 
         if hasattr(self, "datasets"):
+            result += "<tr><td colspan='2'>"
+            result += "<details>"
+            result += "<summary>Xarray Datasets</summary>"
+            result += "<div><table>"
             for group in self.datasets.keys():
                 result += "<tr><td colspan='2'>"
                 result += "<details>"
-                result += f"<summary>Xarray Datasets ({group.name})</summary>"
+                result += f"<summary>({group.name})</summary>"
                 result += "<div><table>"
                 result += f"<tr><td>{self.datasets[group]._repr_html_()}</td></tr>"
                 result += "</table></div>"
                 result += "</details>"
                 result += "</td></tr>"
+            result += "</table></div>"
+            result += "</details>"
+            result += "</td></tr>"
+
+        if title:
+            result += "</table>"
 
         return result
 

@@ -7,6 +7,7 @@ from . import (
     RequestedVariable,
     util,
     util2,
+    util_catalog,
 )
 
 __all__ = [
@@ -18,6 +19,8 @@ __all__ = [
     "RequestedVariable",
     "util",
     "util2",
+    "util_case",
+    "util_catalog",
 ]
 
 # class NoAliasDumper(yaml.SafeDumper):
