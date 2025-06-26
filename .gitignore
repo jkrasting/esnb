@@ -1,5 +1,6 @@
 docs/source/api
 build/
+docs/source/api
 .idea
 *.egg-info
 __pycache__
