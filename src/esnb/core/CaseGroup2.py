@@ -150,7 +150,7 @@ def filter_catalog(catalog, variable):
             chunk_freq = preferred_chunkfreqs[0]
         else:
             chunk_freq = ""
-        _cat = _cat.search(chunk_freqs=chunk_freq)
+        _cat = _cat.search(chunk_freq=chunk_freq)
 
     return _cat
 
