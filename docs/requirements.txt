@@ -1,5 +1,2 @@
-jupyter-sphinx==0.5.3
-nbsphinx==0.9.7
 sphinx==8.2.3
 sphinx-book-theme==1.1.4
-sphinx-rtd-theme==3.0.1
