@@ -422,6 +422,9 @@ class NotebookDiagnostic:
         # set top-level datasets
         self._datasets = all_datasets
 
+    def open(self, site="gfdl"):
+        self.load(site=site)
+
     @property
     def datasets(self):
         return [x.dataset for x in self._datasets]
