@@ -239,6 +239,7 @@ class CaseGroup2:
         self.concat_dim = concat_dim
         self.is_resolved = False
         self.is_loaded = False
+        self.metrics = {}
 
         # metadata
         self.description = "" if self.description is None else str(self.description)
@@ -254,6 +255,16 @@ class CaseGroup2:
             _ = [case_time_filter(x, date_range) for x in flatten_list(self.cases)]
 
         self.name = infer_casegroup_name(self) if self.name is None else self.name
+
+    def add_metric(self, name, keyval):
+        assert isinstance(name, str), "metric group name must be a string"
+        assert isinstance(keyval, tuple), "metric must be a (key, value) tuple"
+        assert len(keyval) == 2
+        key, value = keyval
+        if name in self.metrics.keys():
+            self.metrics[name] = {**self.metrics[name], key: value}
+        else:
+            self.metrics[name] = {key: value}
 
     @property
     def files(self):
