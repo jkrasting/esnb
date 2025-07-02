@@ -24,6 +24,8 @@ class RequestedVariable:
         Units of the variable.
     preferred_chunkfreq : list of str or str, optional
         Preferred chunking frequencies, e.g., ["5yr", "2yr", "1yr", "20yr", "unknown"].
+    preferred_grid_label : list of str or str, optional
+        Preferred grid label, e.g., ["gn", "gr", "unknown"].
     frequency : str, optional
         Frequency of the data (e.g., 'mon' for monthly). Default is "mon".
     ppkind : str, optional
@@ -51,6 +53,8 @@ class RequestedVariable:
         Units of the variable.
     preferred_chunkfreq : list of str or None
         Preferred chunking frequencies.
+    preferred_grid_label : list of str or None
+        Preferred grid.
     frequency : str
         Frequency of the data.
     ppkind : str
@@ -84,6 +88,7 @@ class RequestedVariable:
         source_varname=None,
         units=None,
         preferred_chunkfreq=["5yr", "2yr", "1yr", "20yr", "unknown"],
+        preferred_grid_label=["gn", "gr", "unknown"],
         frequency="mon",
         ppkind="ts",
         dimensions=None,
@@ -137,6 +142,8 @@ class RequestedVariable:
             Units of the variable.
         preferred_chunkfreq : list of str or None
             Preferred chunking frequencies as a list.
+        preferred_grid_label : list of str or str, optional
+            Preferred grid label, e.g., ["gn", "gr", "unknown"].
         frequency : str
             Frequency of the variable.
         ppkind : str
@@ -155,6 +162,7 @@ class RequestedVariable:
         self.source_varname = source_varname
         self.units = units
         self.preferred_chunkfreq = preferred_chunkfreq
+        self.preferred_grid_label = preferred_grid_label
         self.frequency = frequency
         self.ppkind = "ts"
         self.dimensions = dimensions
@@ -174,6 +182,13 @@ class RequestedVariable:
                 else self.preferred_chunkfreq
             )
 
+        if self.preferred_grid_label is not None:
+            self.preferred_grid_label = (
+                [self.preferred_grid_label]
+                if not isinstance(self.preferred_grid_label, list)
+                else self.preferred_grid_label
+            )
+
     def to_dict(self):
         """
         Convert the RequestedVariable instance to a dictionary.
@@ -184,7 +199,7 @@ class RequestedVariable:
             A dictionary representation of the RequestedVariable instance,
             containing the following keys: 'varname', 'preferred_realm',
             'standard_name', 'source_varname', 'units', 'preferred_chunkfreq',
-            'frequency', 'ppkind', and 'dimensions'.
+            'preferred_grid_label', 'frequency', 'ppkind', and 'dimensions'.
         """
         return {
             "varname": self.varname,
@@ -193,6 +208,7 @@ class RequestedVariable:
             "source_varname": self.source_varname,
             "units": self.source_varname,
             "preferred_chunkfreq": self.preferred_chunkfreq,
+            "preferred_grid_label": self.preferred_grid_label,
             "frequency": self.frequency,
             "ppkind": self.ppkind,
             "dimensions": self.dimensions,
@@ -263,6 +279,7 @@ class RequestedVariable:
             "frequency",
             "ppkind",
             "preferred_chunkfreq",
+            "preferred_grid_label",
             "preferred_realm",
             "varname",
         ]

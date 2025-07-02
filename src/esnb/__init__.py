@@ -84,6 +84,7 @@ formatter = ColorFormatter(format_str)
 
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+logger.propagate = False
 
 # test_data_root = str(
 #    Path(importlib.util.find_spec("esnb").origin).parent.parent.parent

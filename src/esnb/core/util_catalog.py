@@ -136,7 +136,7 @@ def convert_pangeo_catalog_to_catalogbuilder(
     df.insert(11, "chunk_freq", "unknown")
     df.insert(12, "platform", "unknown")
     df.insert(13, "dimensions", "unknown")
-    df.insert(14, "cell_methods", "unknown")
+    df.insert(14, "cell_methods", "ts")
     df.insert(15, "standard_name", "unknown")
 
     # infer frequency from realm

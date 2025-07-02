@@ -110,15 +110,30 @@ def filter_catalog(catalog, variable):
         The filtered catalog object, narrowed down according to the variable's
         preferences for realm and chunk frequency.
     """
-    _cat = catalog.search(
-        variable_id=variable.varname,
-        cell_methods=variable.ppkind,
-        frequency=variable.frequency,
+
+    # Search for variable name
+    _cat = catalog.search(variable_id=variable.varname)
+    nres = _cat.nunique()["variable_id"]
+    logger.debug(
+        f"Searching for: variable `{variable.varname}` and found {nres} candidates"
+    )
+
+    _cat = _cat.search(cell_methods=variable.ppkind)
+    nres = _cat.nunique()["cell_methods"]
+    logger.debug(
+        f"Searching for: cell methods `{variable.varname}` and found {nres} candidates"
+    )
+
+    _cat = _cat.search(frequency=variable.frequency)
+    nres = _cat.nunique()["frequency"]
+    logger.debug(
+        f"Searching for: frequency `{variable.frequency}` and found {nres} candidates"
     )
 
     # see if one realm exists:
     nrealm = int(_cat.nunique()["realm"])
     if nrealm > 1:
+        logger.debug("Found more than one possible realm")
         realms = list(set(list(_cat.df["realm"])))
         preferred_realms = variable.preferred_realm
         if (
@@ -126,31 +141,70 @@ def filter_catalog(catalog, variable):
             and "ocean_monthly" not in preferred_realms
         ):
             preferred_realms.append("ocean_monthly")
+            logger.debug("Automatically added 'ocean_monthly' to preferred_realms")
         elif (
             "ocean_monthly" in preferred_realms
             and "ocean_month" not in preferred_realms
         ):
             preferred_realms.append("ocean_month")
+            logger.debug("Automatically added 'ocean_month' to preferred_realms")
         else:
             preferred_realms = preferred_realms
         preferred_realms = [x for x in preferred_realms if x in realms]
+        logger.debug(f"Found the following preferred_realms: {preferred_realms}")
         if len(preferred_realms) >= 1:
             realm = preferred_realms[0]
         else:
             realm = ""
+        logger.debug(f"Selected the following realm: '{realm}'")
+
         _cat = _cat.search(realm=realm)
+        nres = _cat.nunique()["realm"]
+        logger.debug(f"Searching for: realm `{realm}` and found {nres} candidates")
 
     # see if one time frequency exists:
     nchunk_freq = int(_cat.nunique()["chunk_freq"])
     if nchunk_freq > 1:
+        logger.debug("Found more than one possible chunk frequency")
         chunk_freqs = list(set(list(_cat.df["chunk_freq"])))
         preferred_chunkfreqs = variable.preferred_chunkfreq
         preferred_chunkfreqs = [x for x in preferred_chunkfreqs if x in chunk_freqs]
+        logger.debug(
+            f"Found the following preferred_chunkfreqs: {preferred_chunkfreqs}"
+        )
         if len(preferred_chunkfreqs) >= 1:
             chunk_freq = preferred_chunkfreqs[0]
         else:
             chunk_freq = ""
+        logger.debug(f"Selected the following chunk_freq: '{chunk_freq}'")
+
         _cat = _cat.search(chunk_freq=chunk_freq)
+        nres = _cat.nunique()["chunk_freq"]
+        logger.debug(
+            f"Searching for: chunk_freq `{chunk_freq}` and found {nres} candidates"
+        )
+
+    # see if more than one grid label exists:
+    ngrid_label = int(_cat.nunique()["grid_label"])
+    if ngrid_label > 1:
+        logger.debug("Found more than one possible grid label")
+        grid_labels = list(set(list(_cat.df["grid_label"])))
+        preferred_grid_labels = variable.preferred_grid_label
+        preferred_grid_labels = [x for x in preferred_grid_labels if x in grid_labels]
+        logger.debug(
+            f"Found the following preferred_grid_labels: {preferred_grid_labels}"
+        )
+        if len(preferred_grid_labels) >= 1:
+            grid_label = preferred_grid_labels[0]
+        else:
+            grid_label = ""
+        logger.debug(f"Selected the following grid_label: '{grid_label}'")
+
+        _cat = _cat.search(grid_label=grid_label)
+        nres = _cat.nunique()["grid_label"]
+        logger.debug(
+            f"Searching for: grid_label `{grid_label}` and found {nres} candidates"
+        )
 
     return _cat
 
@@ -307,10 +361,13 @@ class CaseGroup2:
         - Updates the `catalog` attribute of each case in the group.
         - Sets `self.is_resolved` to True upon completion.
         """
+        logger.info(f"Resolving case: {self.name}")
         caselist = flatten_list(self.cases)
         catalogs = [x.catalog for x in caselist]
+        logger.info(f"Found n={len(catalogs)} catalogs from individual cases")
         results = []
         for var in varlist:
+            logger.info(f"Processing variable `{var.varname}` for case `{self.name}`")
             results.append([filter_catalog(x, var) for x in catalogs])
         zipped = list(zip(*results))
         merged = [merge_intake_catalogs(list(x)) for x in zipped]
