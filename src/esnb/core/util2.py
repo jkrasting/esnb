@@ -1,6 +1,13 @@
+import datetime
 import json
 import logging
+import random
+import re
+import string
+import tempfile
 from pathlib import Path
+
+import xarray as xr
 
 from esnb.core.CaseExperiment2 import CaseExperiment2
 from esnb.core.util import is_overlapping, process_time_string
@@ -49,6 +56,13 @@ def case_time_filter(case, date_range):
     return df
 
 
+def clean_string(input_string):
+    res = re.sub(r"[^a-zA-Z0-9\s]", "", input_string)
+    res = res.replace(" ", "_")
+    res = re.sub(r"_+", "_", res)
+    return res
+
+
 def flatten_list(nested_list):
     """
     Recursively flattens a nested list into a single list of elements.
@@ -76,6 +90,16 @@ def flatten_list(nested_list):
         else:
             flat_list.append(item)
     return flat_list
+
+
+def generate_tempdir_path(name=None):
+    name = "" if name is None else clean_string(name) + "_"
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    rand_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+    custom_name = f"{name}{date_str}_{rand_str}"
+    base_temp_dir = tempfile.gettempdir()
+    full_path = Path(base_temp_dir) / Path(custom_name)
+    return full_path
 
 
 def infer_source_data_file_types(flist):
@@ -188,6 +212,40 @@ def read_json(name):
     lines = [x for x in lines if "//" not in x]
     json_str = "".join(lines)
     return json.loads(json_str)
+
+
+def reset_encoding(xobj, attrs=None):
+    """Function to reset encoding attributes on an xarray object
+
+    Parameters
+    ----------
+    xobj : xarray.core.dataset.Dataset or xarray.core.dataarray.DataArray
+        Input xarray object
+    attrs : list, optional
+        Attributes to reset, by default None
+
+    Returns
+    -------
+    xarray.core.dataset.Dataset or xarray.core.dataarray.DataArray
+        Xarray object without encoding attributes
+    """
+
+    attrs = ["chunks", "preferred_chunks"] if attrs is None else attrs
+
+    if isinstance(xobj, xr.DataArray):
+        for attr in attrs:
+            xobj.encoding.pop(attr, None)
+
+    elif isinstance(xobj, xr.Dataset):
+        for attr in attrs:
+            xobj.encoding.pop(attr, None)
+            for var in xobj.variables:
+                xobj[var].encoding.pop(attr, None)
+
+    else:
+        raise ValueError("xobj must be an xarray Dataset or DataArray")
+
+    return xobj
 
 
 def xr_date_range_to_datetime(date_range):

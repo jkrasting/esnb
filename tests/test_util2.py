@@ -1,15 +1,20 @@
 import copy
 import datetime as dt
+import pathlib
 
 import intake_esm
 
 import esnb
 from esnb import CaseExperiment2
-from esnb.core.util2 import (case_time_filter, infer_source_data_file_types,
-                             initialize_cases_from_source,
-                             xr_date_range_to_datetime)
+from esnb.core.util2 import (
+    case_time_filter,
+    generate_tempdir_path,
+    infer_source_data_file_types,
+    initialize_cases_from_source,
+    xr_date_range_to_datetime,
+)
 
-#TODO: Add tests for `read_json`
+# TODO: Add tests for `read_json`, `reset_encoding`
 
 source1 = esnb.datasources.test_catalog_gfdl_uda
 source2 = esnb.datasources.test_mdtf_settings
@@ -56,6 +61,14 @@ def test_initialize_cases_from_source():
         isinstance(x, esnb.core.CaseExperiment2.CaseExperiment2)
         for x in groups[1] + [groups[0]]
     )
+
+
+def test_generate_tempdir_path_1():
+    assert isinstance(generate_tempdir_path(), pathlib.Path)
+
+
+def test_generate_tempdir_path_2():
+    assert "abc123" in str(generate_tempdir_path("abc123"))
 
 
 def test_xr_date_range_to_datetime():
