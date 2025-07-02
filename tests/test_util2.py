@@ -5,11 +5,11 @@ import intake_esm
 
 import esnb
 from esnb import CaseExperiment2
-from esnb.core.util2 import (
-    case_time_filter,
-    initialize_cases_from_source,
-    xr_date_range_to_datetime,
-)
+from esnb.core.util2 import (case_time_filter, infer_source_data_file_types,
+                             initialize_cases_from_source,
+                             xr_date_range_to_datetime)
+
+#TODO: Add tests for `read_json`
 
 source1 = esnb.datasources.test_catalog_gfdl_uda
 source2 = esnb.datasources.test_mdtf_settings
@@ -20,6 +20,18 @@ cat2 = intake_esm.esm_datastore(esnb.datasources.test_catalog_esm4_hist)
 cat3 = intake_esm.esm_datastore(esnb.datasources.test_catalog_esm4_futr)
 cat4 = intake_esm.esm_datastore(esnb.datasources.test_catalog_gfdl_uda)
 cat5 = intake_esm.esm_datastore(esnb.datasources.cmip6_pangeo)
+
+test_paths_1 = [
+    "gs://cmip6/CMIP6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/",
+    "gs://cmip6/CMIP6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Omon/tos/gr/v20190308/",
+    "gs://cmip6/CMIP6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Omon/zos/gr/v20190308/",
+]
+
+test_paths_2 = [
+    "/ESM4_historical_D1/gfdl.ncrc4-intel16-prod-openmp/pp/atmos_cmip/ts/monthly/5yr/atmos_cmip.198001-198412.tas.nc",
+    "/ESM4_historical_D1/gfdl.ncrc4-intel16-prod-openmp/pp/atmos_cmip/ts/monthly/5yr/atmos_cmip.198501-198912.tas.nc",
+    "/ESM4_historical_D1/gfdl.ncrc4-intel16-prod-openmp/pp/atmos_cmip/ts/monthly/5yr/atmos_cmip.199001-199412.tas.nc",
+]
 
 
 def test_case_time_filter():
@@ -52,3 +64,15 @@ def test_xr_date_range_to_datetime():
         dt.datetime(41, 1, 1),
         dt.datetime(60, 12, 31),
     )
+
+
+def test_infer_source_data_file_types_1():
+    assert infer_source_data_file_types(test_paths_1) == "google_cloud"
+
+
+def test_infer_source_data_file_types_2():
+    assert infer_source_data_file_types(test_paths_2) == "unix_file"
+
+
+# test_infer_source_data_file_types_1()
+# test_infer_source_data_file_types_2()

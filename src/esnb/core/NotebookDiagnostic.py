@@ -1,49 +1,21 @@
 import json
 import logging
 import os
-# import warnings
 
+import fsspec
 import xarray as xr
-from . import html, util
-from .RequestedVariable import RequestedVariable
-from .VirtualDataset import VirtualDataset
-from .util2 import flatten_list
+
 from esnb.sites import gfdl
 
+from . import html, util
+from .RequestedVariable import RequestedVariable
+from .util2 import flatten_list, infer_source_data_file_types, read_json
+from .VirtualDataset import VirtualDataset
+
+# import warnings
+
+
 logger = logging.getLogger(__name__)
-
-
-def json_init(name):
-    """
-    Reads a JSON file, removes lines containing '//' comments, and returns the
-    parsed JSON object.
-
-    Parameters
-    ----------
-    name : str
-        The path to the JSON file to be read.
-
-    Returns
-    -------
-    dict or list
-        The parsed JSON object from the file.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the specified file does not exist.
-    json.JSONDecodeError
-        If the file content is not valid JSON after comment removal.
-
-    Notes
-    -----
-    Lines containing '//' anywhere are excluded before parsing as JSON.
-    """
-    with open(name, "r") as f:
-        lines = [line.strip() for line in f]
-    lines = [x for x in lines if "//" not in x]
-    json_str = "".join(lines)
-    return json.loads(json_str)
 
 
 class NotebookDiagnostic:
@@ -160,7 +132,7 @@ class NotebookDiagnostic:
         # load an MDTF-compatible jsonc settings file
         if os.path.exists(source):
             logger.info(f"Reading MDTF settings file from: {source}")
-            loaded_file = json_init(source)
+            loaded_file = read_json(source)
             settings = loaded_file["settings"]
 
             self.dimensions = (
@@ -346,9 +318,6 @@ class NotebookDiagnostic:
 
         xr_merge_opts = {"coords": "minimal", "compat": "override"}
 
-        if site == "gfdl":
-            gfdl.call_dmget(diag.files)
-
         def _open_xr(files, varname=None):
             time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
             _ds = xr.open_mfdataset(
@@ -361,6 +330,27 @@ class NotebookDiagnostic:
             else:
                 ds = _ds
             return ds
+
+        def _open_gcs(files, varname=None):
+            mappers = [fsspec.get_mapper(x) for x in files]
+            time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
+            _ds = [
+                xr.open_zarr(x, decode_times=time_coder, decode_timedelta=True)
+                for x in mappers
+            ]
+            _ds = xr.merge(_ds, compat="override")
+
+            if varname is not None:
+                ds = xr.Dataset()
+                ds[varname] = _ds[varname]
+                ds.attrs = dict(_ds.attrs)
+            else:
+                ds = _ds
+
+            return ds
+
+        if site == "gfdl":
+            gfdl.call_dmget(diag.files)
 
         # dictionary of datasets by var then group
         all_datasets = []
@@ -384,7 +374,17 @@ class NotebookDiagnostic:
                         list(case.catalog.search(variable_id=var.varname).df["path"])
                     )
 
-                dsets = [_open_xr(x, var.varname) for x in files]
+                # TODO implement infer_source_data_file_types()
+                file_type = infer_source_data_file_types(flatten_list(files))
+
+                if file_type == "unix_file":
+                    dsets = [_open_xr(x, var.varname) for x in files]
+                elif file_type == "google_cloud":
+                    dsets = [_open_gcs(x, var.varname) for x in files]
+                else:
+                    raise ValueError(
+                        f"There is no rule yet to open file type: {file_type}"
+                    )
 
                 if len(dsets) > 1:
                     ds = xr.concat(dsets, concat_dim)

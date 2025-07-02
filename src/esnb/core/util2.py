@@ -1,4 +1,6 @@
+import json
 import logging
+from pathlib import Path
 
 from esnb.core.CaseExperiment2 import CaseExperiment2
 from esnb.core.util import is_overlapping, process_time_string
@@ -76,6 +78,29 @@ def flatten_list(nested_list):
     return flat_list
 
 
+def infer_source_data_file_types(flist):
+    flist = [flist] if not isinstance(flist, list) else flist
+    flist = [Path(x) for x in flist]
+    prefixes = [x.as_posix().split(":")[0] + ":" for x in flist if ":" in str(x)]
+    prefixes = list(set(prefixes))
+
+    if len(prefixes) > 1:
+        raise ValueError(
+            "Multiple source data file types detected. Unsure how to proceed."
+        )
+    elif len(prefixes) == 1:
+        if prefixes[0] == "gs:":
+            file_type = "google_cloud"
+        else:
+            raise ValueError(f"Unrecognized storage type: {prefixes[0]}")
+    elif len(prefixes) == 0:
+        file_type = "unix_file"
+    else:
+        raise RuntimeError("Unable to determine source file type")
+
+    return file_type
+
+
 def initialize_cases_from_source(source):
     """
     Initializes case or experiment groups from a nested source list.
@@ -130,6 +155,39 @@ def initialize_cases_from_source(source):
             groups.append(subgroup)
 
     return groups
+
+
+def read_json(name):
+    """
+    Reads a JSON file, removes lines containing '//' comments, and returns the
+    parsed JSON object.
+
+    Parameters
+    ----------
+    name : str
+        The path to the JSON file to be read.
+
+    Returns
+    -------
+    dict or list
+        The parsed JSON object from the file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    json.JSONDecodeError
+        If the file content is not valid JSON after comment removal.
+
+    Notes
+    -----
+    Lines containing '//' anywhere are excluded before parsing as JSON.
+    """
+    with open(name, "r") as f:
+        lines = [line.strip() for line in f]
+    lines = [x for x in lines if "//" not in x]
+    json_str = "".join(lines)
+    return json.loads(json_str)
 
 
 def xr_date_range_to_datetime(date_range):
