@@ -102,6 +102,15 @@ def generate_tempdir_path(name=None):
     return full_path
 
 
+def get_nesting_depth(lst):
+    if not isinstance(lst, list):
+        return 0
+    elif not lst:
+        return 1
+    else:
+        return 1 + max(get_nesting_depth(item) for item in lst)
+
+
 def infer_source_data_file_types(flist):
     flist = [flist] if not isinstance(flist, list) else flist
     flist = [Path(x) for x in flist]

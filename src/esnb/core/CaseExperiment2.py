@@ -133,6 +133,13 @@ class CaseExperiment2(MDTFCaseSettings):
                 util.process_time_string
             )
 
+    def files(self, **kwargs):
+        if len(kwargs) > 0:
+            result = self.catalog.search(**kwargs).df["path"]
+        else:
+            result = self.catalog.df["path"]
+        return sorted(list(result))
+
     def __str__(self):
         """
         Returns a string representation of the object.
