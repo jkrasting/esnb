@@ -8,6 +8,7 @@ from . import (
     util,
     util2,
     util_catalog,
+    util_xr,
 )
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     "util2",
     "util_case",
     "util_catalog",
+    "util_xr",
 ]
 
 # class NoAliasDumper(yaml.SafeDumper):

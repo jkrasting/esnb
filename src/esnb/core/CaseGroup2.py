@@ -7,13 +7,14 @@ from esnb.core.util2 import case_time_filter, flatten_list, initialize_cases_fro
 
 from . import html
 from .util_catalog import merge_intake_catalogs
+from .util_xr import open_var_from_group
 from .VirtualDataset import resolve_dataset_refs
 
 logger = logging.getLogger(__name__)
 
 
 def infer_casegroup_name(group):
-    names = [x.name for x in group.cases]
+    names = [x.name for x in flatten_list(group.cases)]
     return str(" + ").join(names)
 
 
@@ -336,6 +337,9 @@ class CaseGroup2:
         caselist = [x for x in flatten_list(self.cases)]
         return sorted(flatten_list([list(x.catalog.df["path"]) for x in caselist]))
 
+    def open_var(self, varname):
+        return open_var_from_group(self, varname)
+
     def resolve(self, varlist):
         """
         Resolve the catalogs for each case in the group based on the provided variables.
@@ -481,9 +485,13 @@ class CaseGroup2:
         for k in sorted(list(self.__dict__.keys())):
             if k in acceptable_keys:
                 v = self.__dict__[k]
-                v = tuple(v) if isinstance(v, list) else v
-                hashables.append(v)
-        return hash(tuple(hashables))
+                v = tuple(flatten_list(v)) if isinstance(v, list) else v
+                if isinstance(v, list):
+                    hashables = hashables + v
+                else:
+                    hashables.append(v)
+        hashables = tuple(hashables)
+        return hash(hashables)
 
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()

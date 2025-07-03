@@ -4,20 +4,13 @@ import os
 import shutil
 from pathlib import Path
 
-import fsspec
 import xarray as xr
 
 from esnb.sites import gfdl
 
 from . import html, util
 from .RequestedVariable import RequestedVariable
-from .util2 import (
-    flatten_list,
-    generate_tempdir_path,
-    infer_source_data_file_types,
-    read_json,
-    reset_encoding,
-)
+from .util2 import flatten_list, generate_tempdir_path, read_json, reset_encoding
 from .VirtualDataset import VirtualDataset
 
 # import warnings
@@ -336,43 +329,6 @@ class NotebookDiagnostic:
         groups = diag.groups
         variables = diag.variables
 
-        xr_merge_opts = {"coords": "minimal", "compat": "override"}
-
-        def _open_xr(files, varname=None):
-            time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
-            _ds = xr.open_mfdataset(
-                files,
-                decode_times=time_coder,
-                decode_timedelta=True,
-                chunks={},
-                **xr_merge_opts,
-            )
-            if varname is not None:
-                ds = xr.Dataset()
-                ds[varname] = _ds[varname]
-                ds.attrs = dict(_ds.attrs)
-            else:
-                ds = _ds
-            return ds
-
-        def _open_gcs(files, varname=None):
-            mappers = [fsspec.get_mapper(x) for x in files]
-            time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
-            _ds = [
-                xr.open_zarr(x, decode_times=time_coder, decode_timedelta=True)
-                for x in mappers
-            ]
-            _ds = xr.merge(_ds, compat="override")
-
-            if varname is not None:
-                ds = xr.Dataset()
-                ds[varname] = _ds[varname]
-                ds.attrs = dict(_ds.attrs)
-            else:
-                ds = _ds
-
-            return ds
-
         if site == "gfdl" and dmget:
             gfdl.call_dmget(diag.files)
 
@@ -383,6 +339,7 @@ class NotebookDiagnostic:
         for var in variables:
             ds_by_var[var] = {}
             for group in groups:
+                logger.info(f"Opening `{var.varname}` datasets for group: {group.name}")
                 workdir = self.workdir
                 _date_range = str("_").join(list(group.date_range))
                 cached_file_name = f"{group.name}_{var.varname}_{_date_range}"
@@ -403,54 +360,9 @@ class NotebookDiagnostic:
                         raise ValueError(
                             f"Trying to open unsupported cache type: {cache_format}"
                         )
-
                 else:
-                    concat_dim = getattr(group, "concat_dim", None)
-                    # print(var, group, concat_dim)
-                    ncases = len(group.cases)
-                    if ncases > 1:
-                        assert concat_dim is not None, (
-                            f"Multiple cases discovered in group {group} but no concat_dim found"
-                        )
+                    ds = group.open_var(var.varname)
 
-                    files = []
-                    for case in group.cases:
-                        files.append(
-                            list(
-                                case.catalog.search(variable_id=var.varname).df["path"]
-                            )
-                        )
-
-                    file_type = infer_source_data_file_types(flatten_list(files))
-
-                    if file_type == "unix_file":
-                        logger.info(f"Opening dataset files for group {group.name}")
-                        logger.debug(
-                            f"Opening dataset files for group {group.name}: {files}"
-                        )
-                        dsets = [_open_xr(x, var.varname) for x in files]
-                    elif file_type == "google_cloud":
-                        logger.info(
-                            f"Opening Google Cloud Storage for group {group.name}"
-                        )
-                        logger.debug(
-                            f"Opening Google Cloud Storage for group {group.name}: {files}"
-                        )
-                        dsets = [_open_gcs(x, var.varname) for x in files]
-                    else:
-                        raise ValueError(
-                            f"There is no rule yet to open file type: {file_type}"
-                        )
-
-                    if len(dsets) > 1:
-                        logger.info(
-                            f"Concatenating multiple cases along dimension {concat_dim}: {group.name}"
-                        )
-                        ds = xr.concat(dsets, concat_dim)
-                    else:
-                        ds = dsets[0]
-
-                    # Select date range
                     tcoord = "time"
                     logger.info(
                         f"Subsetting time range {group.date_range}: {group.name}"
