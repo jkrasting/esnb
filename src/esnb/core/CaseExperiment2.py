@@ -1,3 +1,4 @@
+import copy
 import logging
 from pathlib import Path
 
@@ -133,12 +134,18 @@ class CaseExperiment2(MDTFCaseSettings):
                 util.process_time_string
             )
 
+        # Keep a copy of the original catalog in case its needed later
+        self._source_catalog = copy.deepcopy(self.catalog)
+
     def files(self, **kwargs):
         if len(kwargs) > 0:
             result = self.catalog.search(**kwargs).df["path"]
         else:
             result = self.catalog.df["path"]
         return sorted(list(result))
+
+    def query(self, param):
+        return sorted(list(set(self.catalog.df[param])))
 
     def __str__(self):
         """
