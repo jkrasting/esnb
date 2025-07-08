@@ -10,7 +10,7 @@ import socket
 import subprocess
 
 import intake
-
+import requests
 from esnb.core.esnb_datastore import esnb_datastore
 
 __all__ = [
@@ -173,7 +173,21 @@ def open_intake_catalog_dora(source, mode):
     logger.info(f"Fetching intake catalog from url: {url}")
     if not dora:
         logger.critical("Network route to dora is unavailble. Check connection.")
-    catalog = intake.open_esm_datastore(url)
+
+    try:
+        catalog = intake.open_esm_datastore(url)
+    except Exception as exc:
+        url = url.replace("api/intake", "api/intake/catalog")
+        url = url.replace(".json", ".csv.gz")
+        response = requests.get(url)
+        if response.status_code == 404:
+            msg = (
+                "Intake catalog does not exist or was not generated. "
+                + f"Wait 6 hours or see a Dora admin. URL:{url}"
+            )
+            raise ValueError(msg)
+        else:
+            raise exc
 
     return catalog
 
