@@ -2,6 +2,8 @@ import logging
 import warnings
 from pathlib import Path
 
+import xarray as xr
+
 import esnb
 from esnb.core.util2 import case_time_filter, flatten_list, initialize_cases_from_source
 
@@ -382,6 +384,40 @@ class CaseGroup2:
     @property
     def datasets(self):
         return resolve_dataset_refs(self._datasets)
+
+    def open_statics(self):
+        dsets = {}
+        for k, v in self._static_files.items():
+            if v is not None:
+                ds = xr.open_mfdataset(v, decode_times=False)
+            else:
+                ds = None
+            dsets[k] = ds
+        self.statics = dsets
+
+    @property
+    def static_files(self):
+        statics = flatten_list(list(self._static_files.values()))
+        return sorted([x for x in statics if x is not None])
+
+    @property
+    def _static_files(self):
+        realms = []
+        # get list of realms ebing used
+        cases = self.cases
+        for case in cases:
+            realms = realms + case.query("realm")
+            realms = sorted(list(set(realms)))
+        # look for static files for each realm
+        _static_files = {}
+        for realm in realms:
+            static = cases[0]._source_catalog.search(
+                frequency="fx", table_id="fx", realm=realm
+            )
+            static = list(static.df["path"])
+            static = None if len(static) == 0 else static
+            _static_files[realm] = static
+        return _static_files
 
     def __str__(self):
         """

@@ -396,10 +396,23 @@ class NotebookDiagnostic:
         # set top-level datasets
         self._datasets = all_datasets
 
-    def open(self, site="gfdl", dmget=False, use_cache=False, cache_format="zarr"):
+    def open(
+        self,
+        site="gfdl",
+        dmget=False,
+        use_cache=False,
+        cache_format="zarr",
+        statics=False,
+    ):
         self.load(
             site=site, dmget=dmget, use_cache=use_cache, cache_format=cache_format
         )
+        if statics:
+            logger.info("Loading dictionary of static files")
+            try:
+                _ = [x.open_statics() for x in self.groups]
+            except Exception:
+                logger.warning("Unable to load static files")
 
     def write_cache(
         self, workdir=None, output_format="zarr", overwrite=False, chunks=None
