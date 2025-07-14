@@ -1,6 +1,7 @@
 import esnb
 from esnb.core.util_case import infer_case_source
 
+src_dict = {}
 dora_url = "https://dora.gfdl.noaa.gov/api/intake/odiv-1.json"
 dora_id = "odiv-1"
 dora_id_2 = 895
@@ -19,6 +20,10 @@ def test_infer_case_source_dora_id_1():
 
 def test_infer_case_source_dora_id_2():
     assert infer_case_source(dora_id_2) == "dora_id"
+
+
+def test_infer_case_source_dictionary():
+    assert infer_case_source(src_dict) == "dictionary"
 
 
 def test_infer_case_source_intake_url():
