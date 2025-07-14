@@ -9,8 +9,10 @@ import xarray as xr
 from esnb.sites import gfdl
 
 from . import html, util
+from .CaseGroup2 import CaseGroup2
 from .RequestedVariable import RequestedVariable
-from .util2 import flatten_list, generate_tempdir_path, read_json, reset_encoding
+from .util2 import (flatten_list, generate_tempdir_path, read_json,
+                    reset_encoding)
 from .VirtualDataset import VirtualDataset
 
 # import warnings
@@ -442,6 +444,22 @@ class NotebookDiagnostic:
         groups : list or None, optional
             List of groups to resolve. If None, uses an empty list.
         """
+        esnb_case_data = os.environ.get("ESNB_CASE_DATA", None)
+        esnb_case_file = os.environ.get("ESNB_CASE_FILE", None)
+
+        logger.debug(f"Case override settings: ESNB_CASE_DATA={esnb_case_data}")
+        logger.debug(f"Case override settings: ESNB_CASE_FILE={esnb_case_file}")
+
+        if esnb_case_data is not None:
+            logger.info("Converting case override data to dict")
+            logger.info("This feature is not fully implemented; falling back to original groups")
+            groups = groups
+        elif esnb_case_file is not None:
+            logger.info(f"Reading case override settings from file: {esnb_case_file}")
+            if not os.path.exists(esnb_case_file):
+                raise FileNotFoundError(f"File does not exist: {esnb_case_file}")
+            groups = [CaseGroup2(esnb_case_file)]
+
         groups = [] if groups is None else groups
         groups = [groups] if not isinstance(groups, list) else groups
         self.groups = groups
