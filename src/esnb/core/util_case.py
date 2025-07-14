@@ -25,6 +25,7 @@ def infer_case_source(source):
     -------
     mode : str
         The inferred mode of the source. Possible values include:
+        - 'dictionary': Dict-object with MDTF settings key conventions
         - 'dora_id': Dora ID (numeric or project-level)
         - 'dora_url': URL pointing to Dora
         - 'intake_url': URL suggesting an intake catalog
@@ -43,7 +44,11 @@ def infer_case_source(source):
     NotImplementedError
         If the supplied path is a directory (future support planned).
     """
-    if isinstance(source, str):
+    if isinstance(source, dict):
+        logger.debug("Found source dictionary -- assuming MDTF settings convention")
+        mode = "dictionary"
+
+    elif isinstance(source, str):
         if source.isnumeric():
             logger.debug(f"Found source string with numeric Dora ID - {source}")
             mode = "dora_id"
