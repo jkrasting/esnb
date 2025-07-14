@@ -83,6 +83,22 @@ def standardize_mdtf_case_settings(settings):
     return target
 
 
+def ingest_mdtf_settings_dict(caseobj, settings_dict):
+    caseobj.source = "Settings Dictionary"
+    _settings = settings_dict
+    missing_keys = missing_dict_keys(_settings, ["DATA_CATALOG", "case_list"])
+    if len(missing_keys) > 0:
+        raise ValueError(
+            f"Encountered missing fields {missing_keys} in MDTF settings file {caseobj.source}"
+        )
+    # set special attribute
+    caseobj.catalog = _settings["DATA_CATALOG"]
+    caseobj.mdtf_settings = _settings
+    assert len(caseobj.catalog) > 0, (
+        f"`DATA_CATALOG` is empty in MDTF settings file {caseobj.source}"
+    )
+
+
 class MDTFCaseSettings:
     """
     Class for handling MDTF case settings, including loading from and writing to
@@ -98,81 +114,19 @@ class MDTFCaseSettings:
         Writes the current MDTF settings to a file in the specified format.
     """
 
-    # def load_mdtf_settings_file(self, settings_file):
-    #     """
-    #     Load MDTF settings from a YAML file and validate required fields.
-
-    #     Parameters
-    #     ----------
-    #     settings_file : str or Path
-    #         Path to the MDTF settings YAML file.
-
-    #     Raises
-    #     ------
-    #     FileNotFoundError
-    #         If the specified settings file does not exist.
-    #     ValueError
-    #         If required fields are missing in the settings file.
-    #     AssertionError
-    #         If the DATA_CATALOG field is empty.
-    #     """
-    #     settings_file = Path(settings_file)
-    #     if not settings_file.exists():
-    #         raise FileNotFoundError(
-    #             f"MDTF settings file does not exist: {settings_file}"
-    #         )
-    #     self.source = str(settings_file)
-
-    #     with open(settings_file, "r") as f:
-    #         _settings = yaml.safe_load(f)
-
-    #     missing_keys = missing_dict_keys(_settings, ["DATA_CATALOG", "case_list"])
-    #     if len(missing_keys) > 0:
-    #         raise ValueError(
-    #             f"Encountered missing fields {missing_keys} in MDTF settings file {self.source}"
-    #         )
-
-    # def write_mdtf_settings_file(self, filename="case_settings.yml", fmt="yaml"):
-    #     """
-    #     Write the current MDTF settings to a file in the specified format.
-
-    #     Parameters
-    #     ----------
-    #     filename : str, optional
-    #         Name of the file to write the settings to (default is
-    #         'case_settings.yml').
-    #     fmt : str, optional
-    #         Format to write the settings in (default is 'yaml').
-    #     """
-    #     _settings = getattr(self, "mdtf_settings", None)
-    #     _settings = gen_mdtf_settings_file_stub() if _settings is None else _settings
-    #     _settings = standardize_mdtf_case_settings(_settings)
-    #     write_dict(_settings, filename, fmt)
-
     def load_mdtf_settings_file(self, settings_file):
         settings_file = Path(settings_file)
         if not settings_file.exists():
             raise FileNotFoundError(
                 f"MDTF settings file does not exist: {settings_file}"
             )
-        self.source = str(settings_file)
-
         with open(settings_file, "r") as f:
             _settings = yaml.safe_load(f)
+        ingest_mdtf_settings_dict(self, _settings)
+        self.source = str(settings_file)
 
-        missing_keys = missing_dict_keys(_settings, ["DATA_CATALOG", "case_list"])
-        if len(missing_keys) > 0:
-            raise ValueError(
-                f"Encountered missing fields {missing_keys} in MDTF settings file {self.source}"
-            )
-
-        # set special attribute
-        self.catalog = _settings["DATA_CATALOG"]
-        self.mdtf_settings = _settings
-
-        assert len(self.catalog) > 0, (
-            f"`DATA_CATALOG` is empty in MDTF settings file {self.source}"
-        )
+    def load_mdtf_settings_dict(self, settings_dict):
+        ingest_mdtf_settings_dict(self, settings_dict)
 
     def write_mdtf_settings_file(self, filename="case_settings.yml", fmt="yaml"):
         _settings = getattr(self, "mdtf_settings", None)
