@@ -23,7 +23,13 @@ def open_paths(files, varname=None):
 
     if varname is not None:
         ds = xr.Dataset()
+
         ds[varname] = _ds[varname]
+
+        if "z_i" in _ds.keys():
+            logger.debug("Found `z_i` in dataset; associating it as a coordinate.")
+            ds["z_i"] = _ds["z_i"]
+
         ds.attrs = dict(_ds.attrs)
     else:
         ds = _ds
