@@ -104,6 +104,19 @@ def call_dmget(files, status=False, verbose=True):
             _ = subprocess.check_output(cmd)
 
 
+def convert_to_momgrid(diag):
+    import momgrid
+
+    for n, ds in enumerate(diag._datasets):
+        try:
+            _ds = momgrid.Gridset(ds.dataset)
+            _ds.data.attrs["model"] = _ds.model
+            logger.debug(f"Replacing existing dataset [{n}] with momgrid version")
+            ds.replace(_ds.data)
+        except Exception:
+            logger.debug(f"Unable to convert dataset [{n}] with momgrid")
+
+
 def load_dora_catalog(idnum, **kwargs):
     """
     Load a Dora catalog using the provided identifier number.
