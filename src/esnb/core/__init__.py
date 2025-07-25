@@ -1,6 +1,16 @@
-from . import (CaseExperiment, CaseExperiment2, CaseGroup, CaseGroup2,
-               NotebookDiagnostic, RequestedVariable, util, util2,
-               util_catalog, util_mdtf, util_xr)
+from . import (
+    CaseExperiment,
+    CaseExperiment2,
+    CaseGroup,
+    CaseGroup2,
+    NotebookDiagnostic,
+    RequestedVariable,
+    util,
+    util2,
+    util_catalog,
+    util_mdtf,
+    util_xr,
+)
 
 __all__ = [
     "CaseExperiment",

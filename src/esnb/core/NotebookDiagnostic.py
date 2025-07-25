@@ -11,8 +11,7 @@ from esnb.sites import gfdl
 from . import html, util
 from .CaseGroup2 import CaseGroup2
 from .RequestedVariable import RequestedVariable
-from .util2 import (flatten_list, generate_tempdir_path, read_json,
-                    reset_encoding)
+from .util2 import flatten_list, generate_tempdir_path, read_json, reset_encoding
 from .VirtualDataset import VirtualDataset
 
 # import warnings
@@ -452,7 +451,9 @@ class NotebookDiagnostic:
 
         if esnb_case_data is not None:
             logger.info("Converting case override data to dict")
-            logger.info("This feature is not fully implemented; falling back to original groups")
+            logger.info(
+                "This feature is not fully implemented; falling back to original groups"
+            )
             groups = groups
         elif esnb_case_file is not None:
             logger.info(f"Reading case override settings from file: {esnb_case_file}")

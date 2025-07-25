@@ -27,6 +27,7 @@ dependencies = [
     "importlib-resources",
     "intake",
     "intake_esm",
+    "matplotlib",
     "momgrid",
     "pandas",
     "pytest",
