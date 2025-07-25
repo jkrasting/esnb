@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from . import core, datasources, sites
+from . import core, datasources, nbtools, sites
 from .core.CaseExperiment import CaseExperiment
 from .core.CaseExperiment2 import CaseExperiment2
 from .core.CaseGroup import CaseGroup
@@ -23,6 +23,7 @@ __all__ = [
     "esnb_datastore",
     "NotebookDiagnostic",
     "RequestedVariable",
+    "nbtools",
 ]
 
 msg = ilm.metadata("esnb")
