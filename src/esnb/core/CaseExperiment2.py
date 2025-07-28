@@ -134,8 +134,12 @@ class CaseExperiment2(MDTFCaseSettings):
                 util.process_time_string
             )
 
-        # Keep a copy of the original catalog in case its needed later
-        self._source_catalog = copy.deepcopy(self.catalog)
+        # Try to eep a copy of the original catalog in case its needed later
+        try:
+            self._source_catalog = copy.deepcopy(self.catalog)
+        except Exception as exc:
+            logger.debug(str(exc))
+            logger.debug("Unable to deep copy source catalog. Not an immediate issue.")
 
     def files(self, **kwargs):
         if len(kwargs) > 0:
