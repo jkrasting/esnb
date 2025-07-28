@@ -2,6 +2,8 @@ import string
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+from io import BytesIO
 from matplotlib import rcParams
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.transforms import Bbox
@@ -10,6 +12,8 @@ from . import xr_stats
 
 try:
     import momgrid
+    from pptx import Presentation
+    from pptx.util import Inches
 except Exception:
     pass
 
@@ -167,3 +171,27 @@ def panel_letters(axes, x=-0.1, y=1.12, **kwargs):
         kwargs = {"weight": "bold", "ha": "left", "fontsize": 7}
     for n, ax in enumerate(axes):
         ax.text(x, y, labels[n], transform=ax.transAxes, **kwargs)
+
+
+def save_pptx(figs, filename, dpi=200):
+    figs = [figs] if not isinstance(figs, list) else figs
+
+    prs = Presentation()
+    # 16x9 layout below
+    prs.slide_width = Inches(13.33)
+    prs.slide_height = Inches(7.5)
+    blank_slide_layout = prs.slide_layouts[6]
+
+    # Loop through figures
+    for fig in figs:
+        image_stream = BytesIO()
+        fig.savefig(image_stream, format="png", bbox_inches="tight", dpi=dpi)
+        image_stream.seek(0)
+
+        slide = prs.slides.add_slide(blank_slide_layout)
+        slide.shapes.add_picture(
+            image_stream, Inches(0.5), Inches(0.5), width=Inches(12.33)
+        )  # 0.5-inch margin
+
+    # Save the presentation
+    prs.save(filename)
