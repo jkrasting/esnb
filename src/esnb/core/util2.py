@@ -1,7 +1,9 @@
 import datetime
+import io
 import json
 import logging
 import random
+import os
 import re
 import string
 import tempfile
@@ -100,6 +102,55 @@ def generate_tempdir_path(name=None):
     base_temp_dir = tempfile.gettempdir()
     full_path = Path(base_temp_dir) / Path(custom_name)
     return full_path
+
+
+def fig_to_bytes(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def gemini(figs, prompt=None, model_name="gemini-2.5-pro", jupyter=True):
+    import google.generativeai as genai
+    import PIL.Image
+
+    if "GEMINI_API_KEY" not in os.environ.keys():
+        raise RuntimeError("'GEMINI_API_KEY' must be set to use this feature.")
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    model = genai.GenerativeModel(model_name)
+    image_data_list = []
+    figs = [figs] if not isinstance(figs, list) else figs
+    for fig in figs:
+        image_data_list.append(PIL.Image.open(io.BytesIO(fig_to_bytes(fig))))
+
+    prompt_parts = []
+    for i, img_pil in enumerate(image_data_list):
+        prompt_parts.append(f"Here is Figure {i + 1}:")
+        prompt_parts.append(img_pil)
+        if i < len(image_data_list) - 1:
+            prompt_parts.append("\n")
+
+    if prompt is None:
+        prompt = (
+            "\n\nBased on these figures, please provide a comprehensive "
+            + "analysis of the trends, outliers, and any notable observations. "
+            + "Compare and contrast the data presented in each figure. "
+            + "What insights can be drawn from this visualization?"
+        )
+
+    prompt_parts.append(prompt)
+
+    response = model.generate_content(prompt_parts)
+
+    result = f"Prompt: {prompt} \n\n" + response.text
+
+    if jupyter:
+        from IPython.display import display, Markdown
+
+        display(Markdown(result))
+    else:
+        return result
 
 
 def get_nesting_depth(lst):
