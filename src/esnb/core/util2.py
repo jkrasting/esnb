@@ -46,6 +46,7 @@ def case_time_filter(case, date_range):
     This function modifies `case.catalog.esmcat._df` in place to reflect the
     filtered DataFrame.
     """
+    logger.debug(f"Case catalog before time filtering: {case.catalog}")
     assert len(date_range) == 2
     trange = xr_date_range_to_datetime(date_range)
     df = case.catalog.df
@@ -55,6 +56,7 @@ def case_time_filter(case, date_range):
             non_matching_times.append(index)
     df = df.drop(non_matching_times)
     case.catalog.esmcat._df = df
+    logger.debug(f"Case catalog after time filtering: {case.catalog}")
     return df
 
 
