@@ -125,6 +125,8 @@ class CaseExperiment2(MDTFCaseSettings):
 
         self.name = "Generic Case" if self.name is None else self.name
 
+        logger.debug(f"Intake catalog before time range conversion: {self.catalog}")
+
         # Convert catalog `time_range` to tuple of datetime objects
         if isinstance(self.catalog, intake_esm.core.esm_datastore):
             logger.debug(
@@ -134,7 +136,9 @@ class CaseExperiment2(MDTFCaseSettings):
                 util.process_time_string
             )
 
-        # Try to eep a copy of the original catalog in case its needed later
+        logger.debug(f"Intake catalog after time range conversion: {self.catalog}")
+
+        # Try to keep a copy of the original catalog in case its needed later
         try:
             self._source_catalog = copy.deepcopy(self.catalog)
         except Exception as exc:
