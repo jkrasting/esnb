@@ -121,17 +121,19 @@ def filter_catalog(catalog, variable):
         f"Searching for: variable `{variable.varname}` and found {nres} candidates"
     )
 
-    _cat = _cat.search(cell_methods=variable.ppkind)
-    nres = _cat.nunique()["cell_methods"]
-    logger.debug(
-        f"Searching for: cell methods `{variable.varname}` and found {nres} candidates"
-    )
+    if _cat.nunique()["cell_methods"] > 1:
+        _cat = _cat.search(cell_methods=variable.ppkind)
+        nres = _cat.nunique()["cell_methods"]
+        logger.debug(
+            f"Searching for: cell methods `{variable.varname}` and found {nres} candidates"
+        )
 
-    _cat = _cat.search(frequency=variable.frequency)
-    nres = _cat.nunique()["frequency"]
-    logger.debug(
-        f"Searching for: frequency `{variable.frequency}` and found {nres} candidates"
-    )
+    if _cat.nunique()["frequency"] > 1:
+        _cat = _cat.search(frequency=variable.frequency)
+        nres = _cat.nunique()["frequency"]
+        logger.debug(
+            f"Searching for: frequency `{variable.frequency}` and found {nres} candidates"
+        )
 
     # see if one realm exists:
     nrealm = int(_cat.nunique()["realm"])
@@ -255,6 +257,7 @@ class CaseGroup2:
         name=None,
         date_range=None,
         description=None,
+        mapping=None,
         **kwargs,
     ):
         """
@@ -296,12 +299,19 @@ class CaseGroup2:
         self.concat_dim = concat_dim
         self.is_resolved = False
         self.is_loaded = False
+        self.mapping = mapping
         self.metrics = {}
 
         # metadata
         self.description = "" if self.description is None else str(self.description)
 
         logger.info(f"Initializing CaseGroup object(s) from source: {source}")
+
+        if self.mapping is not None:
+            logger.info(
+                "Variable mapping dictionary provided; will rename variables if necessary."
+            )
+
         source = [source] if not isinstance(source, list) else source
         self.cases = initialize_cases_from_source(source)
 
@@ -372,9 +382,20 @@ class CaseGroup2:
         catalogs = [x.catalog for x in caselist]
         logger.info(f"Found n={len(catalogs)} catalogs from individual cases")
         results = []
+
+        if self.mapping is not None:
+            logger.info("Renaming dictionary found; about to rename variables")
+
         for var in varlist:
+            if var.varname in self.mapping.keys():
+                old_name = var.varname
+                new_name = self.mapping[var.varname]
+                var.varname = new_name
+                logger.info(f"Renamed variable: {old_name} --> {new_name}")
+
             logger.info(f"Processing variable `{var.varname}` for case `{self.name}`")
             results.append([filter_catalog(x, var) for x in catalogs])
+
         zipped = list(zip(*results))
         merged = [merge_intake_catalogs(list(x)) for x in zipped]
         for n, case in enumerate(caselist):
