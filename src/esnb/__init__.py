@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from . import core, datasources, nbtools, sites
+from . import core, datasources, engine, nbtools, sites
 from .core.CaseExperiment import CaseExperiment
 from .core.CaseExperiment2 import CaseExperiment2
 from .core.CaseGroup import CaseGroup
@@ -15,6 +15,7 @@ from .core.RequestedVariable import RequestedVariable
 __all__ = [
     "core",
     "datasources",
+    "engine",
     "sites",
     "CaseExperiment",
     "CaseExperiment2",

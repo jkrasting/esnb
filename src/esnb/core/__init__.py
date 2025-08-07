@@ -17,6 +17,7 @@ __all__ = [
     "CaseExperiment2",
     "CaseGroup",
     "CaseGroup2",
+    "engine",
     "NotebookDiagnostic",
     "RequestedVariable",
     "util",
