@@ -153,6 +153,14 @@ def convert_pangeo_catalog_to_catalogbuilder(
     return cat
 
 
+def fill_catalog_nans(catalog):
+    df = catalog.__dict__["esmcat"].df
+    for col in df.columns:
+        df[col] = df[col].fillna("unknown")
+    catalog = update_intake_dataframe(catalog, df)
+    return catalog
+
+
 def merge_intake_catalogs(catalogs, id=None, description=None, title=None, **kwargs):
     """
     Merge multiple intake catalogs with equivalent schemas into a single catalog.

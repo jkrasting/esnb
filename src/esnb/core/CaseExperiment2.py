@@ -9,7 +9,7 @@ from esnb.sites.gfdl import open_intake_catalog_dora
 
 from . import html, util
 from .util_case import infer_case_source
-from .util_catalog import open_intake_catalog
+from .util_catalog import open_intake_catalog, fill_catalog_nans
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ class CaseExperiment2(MDTFCaseSettings):
             )
             if catalog_file.exists():
                 self.catalog = open_intake_catalog(str(catalog_file), "intake_path")
+                self.catalog = fill_catalog_nans(self.catalog)
             else:
                 logger.warning(
                     f"MDTF-specified intake catalog path does not exist: {str(catalog_file)}"
