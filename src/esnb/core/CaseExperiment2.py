@@ -5,11 +5,17 @@ from pathlib import Path
 import intake_esm
 
 from esnb.core.mdtf import MDTFCaseSettings
-from esnb.sites.gfdl import open_intake_catalog_dora
+from esnb.sites.gfdl import (
+    generate_gfdl_intake_catalog,
+    infer_gfdl_expname,
+    infer_is_gfdl_ppdir,
+    open_intake_catalog_dora,
+)
+from esnb.sites.gfdl import site as at_gfdl
 
 from . import html, util
 from .util_case import infer_case_source
-from .util_catalog import open_intake_catalog, fill_catalog_nans
+from .util_catalog import fill_catalog_nans, open_intake_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +124,24 @@ class CaseExperiment2(MDTFCaseSettings):
                 if self.name is None
                 else self.name
             )
+
+        elif self.mode == "pp_dir":
+            if at_gfdl:
+                logger.debug(
+                    f"Checking if path can reasonably be assumed to be a FRE pp dir: {self.source}"
+                )
+                if infer_is_gfdl_ppdir(self.source):
+                    logger.debug("Directory appears to be a valid pp dir")
+                    self.name = infer_gfdl_expname(self.source)
+                    self.catalog = generate_gfdl_intake_catalog(self.source)
+                else:
+                    err = "Encountered a directory that is not a pp dir"
+                    logger.error(err)
+                    raise RuntimeError(err)
+            else:
+                raise NotImplementedError(
+                    "Directory loading is currently only supported at GFDL"
+                )
 
         else:
             err = f"Encountered unrecognized source mode: {self.mode}"
