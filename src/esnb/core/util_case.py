@@ -92,9 +92,6 @@ def infer_case_source(source):
             logger.debug(
                 "Supplied path appears to be a directory, possibly containing post-processing"
             )
-            err = "The supplied path is a directory. In the future, support will be added to generate a catalog."
-            logger.error(err)
-            raise NotImplementedError(err)
         else:
             try:
                 with open(filepath, "r") as f:

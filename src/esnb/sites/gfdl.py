@@ -6,18 +6,24 @@ and loading DORA catalogs via the esnb_datastore interface.
 
 import logging
 import os
+import shutil
 import socket
 import subprocess
+import tempfile
 from pathlib import Path
 
 import intake
+import pandas as pd
 import requests
 
 from esnb.core.esnb_datastore import esnb_datastore
 
 __all__ = [
     "dora",
+    "generate_gfdl_intake_catalog",
     "is_host_reachable",
+    "infer_gfdl_expname",
+    "infer_is_gfdl_ppdir",
     "call_dmget",
     "load_dora_catalog",
     "open_intake_catalog_dora",
@@ -31,6 +37,66 @@ except Exception:
 
 
 logger = logging.getLogger(__name__)
+
+
+def generate_gfdl_intake_catalog(pathpp, fre_cli=None):
+    logger.info(f"Generating intake catalog for: {pathpp}")
+    current_dir = os.getcwd()
+    temp_dir = tempfile.mkdtemp()
+    logger.debug(f"Created tempdir: {temp_dir}")
+    os.chdir(temp_dir)
+
+    fre_cli = (
+        "/home/fms/local/opt/fre/test/bin/fre" if fre_cli is None else str(fre_cli)
+    )
+    fre_cli = Path(fre_cli)
+    logger.debug(f"Using FRE CLI path: {fre_cli}")
+    assert fre_cli.exists()
+
+    command = f"{fre_cli} catalog build {pathpp} catalog"
+    logger.debug(f"Running: {command}")
+    subprocess.run(
+        command.split(" "), stderr=subprocess.DEVNULL, check=True, capture_output=False
+    )
+
+    assert Path("catalog.json").exists()
+    assert Path("catalog.csv").exists()
+
+    logger.debug("Removing extraneous NaNs from generated catalog")
+    df = pd.read_csv("catalog.csv")
+    for col in df.columns:
+        df[col] = df[col].fillna("unknown")
+    df.to_csv("catalog.csv", index=False)
+
+    logger.debug("Loading csv into intake catalog object")
+    catalog = intake.open_esm_datastore("catalog.json")
+
+    logger.debug(f"Removing tempdir: {temp_dir}")
+    os.chdir(current_dir)
+    shutil.rmtree(temp_dir)
+
+    return catalog
+
+
+def infer_gfdl_expname(pathpp):
+    # split path into a list:
+    pathpp = pathpp.split("/")
+    # find the element that includes a FRE target:
+    fre_targets = ["prod", "repro", "debug"]
+    index = [
+        idx
+        for idx, s in enumerate(pathpp)
+        if any(target in s for target in fre_targets)
+    ]
+    # infer that the experiment immediately precedes the target-platform part of the path
+    expname = pathpp[index[-1] - 1] if len(index) > 0 else "fre_experiment"
+    return expname
+
+
+def infer_is_gfdl_ppdir(location):
+    location = str(location) if not isinstance(location, str) else location
+    location = Path(location)
+    return (location.is_dir()) and ("/pp" in str(location))
 
 
 def is_host_reachable(host, port=80, timeout=1):
@@ -228,3 +294,4 @@ def slurm_stub(jobname=None, time=None, outputdir=None):
 
 dora_hostname = os.environ.get("ESNB_GFDL_DORA_HOSTNAME", "dora.gfdl.noaa.gov")
 dora = is_host_reachable(dora_hostname, port=443)
+site = True if ".noaa.gov" in socket.getfqdn() else False
