@@ -8,9 +8,11 @@ import logging
 import os
 import socket
 import subprocess
+from pathlib import Path
 
 import intake
 import requests
+
 from esnb.core.esnb_datastore import esnb_datastore
 
 __all__ = [
@@ -19,6 +21,7 @@ __all__ = [
     "call_dmget",
     "load_dora_catalog",
     "open_intake_catalog_dora",
+    "slurm_stub",
 ]
 
 try:
@@ -203,6 +206,24 @@ def open_intake_catalog_dora(source, mode):
             raise exc
 
     return catalog
+
+
+def slurm_stub(jobname=None, time=None, outputdir=None):
+    homedir = Path(os.environ["HOME"])
+
+    jobname = "esnb-job" if jobname is None else f"esnb-{jobname}"
+    time = "01:00:00" if time is None else str(time)
+    outputdir = homedir if outputdir is None else Path(outputdir)
+
+    if not outputdir.exists():
+        os.makedirs(outputdir, exist_ok=True)
+
+    output = []
+    output.append(f"#SBATCH --job-name={jobname}")
+    output.append(f"#SBATCH --time={time}")
+    output.append(f"#SBATCH --output={str(outputdir / jobname) + '.out'}")
+    output = str("\n").join(output)
+    return output
 
 
 dora_hostname = os.environ.get("ESNB_GFDL_DORA_HOSTNAME", "dora.gfdl.noaa.gov")
