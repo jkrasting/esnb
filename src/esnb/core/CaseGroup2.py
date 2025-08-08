@@ -387,11 +387,12 @@ class CaseGroup2:
             logger.info("Renaming dictionary found; about to rename variables")
 
         for var in varlist:
-            if var.varname in self.mapping.keys():
-                old_name = var.varname
-                new_name = self.mapping[var.varname]
-                var.varname = new_name
-                logger.info(f"Renamed variable: {old_name} --> {new_name}")
+            if isinstance(self.mapping, dict):
+                if var.varname in self.mapping.keys():
+                    old_name = var.varname
+                    new_name = self.mapping[var.varname]
+                    var.varname = new_name
+                    logger.info(f"Renamed variable: {old_name} --> {new_name}")
 
             logger.info(f"Processing variable `{var.varname}` for case `{self.name}`")
             results.append([filter_catalog(x, var) for x in catalogs])
