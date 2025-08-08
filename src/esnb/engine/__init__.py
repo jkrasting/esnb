@@ -1,9 +1,11 @@
 """Module for notebook engine"""
 
 import copy
+import filecmp
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -15,13 +17,48 @@ from nbclient import NotebookClient
 from nbconvert import HTMLExporter
 
 __all__ = [
+    "activate_conda_env",
     "clear_notebook_contents",
+    "create_script",
     "identify_current_kernel_name",
     "is_url",
+    "is_python_conda",
     "open_source_notebook",
     "run_notebook",
     "write_notebook",
 ]
+
+
+def activate_conda_env(env_path: str):
+    bash_cmd = (
+        # load Lmod (if present) and the conda module, but don't fail if absent
+        'source "$MODULESHOME/init/bash" 2>/dev/null || true; '
+        "module load conda 2>/dev/null || true; "
+        # enable `conda activate`
+        'source "$(conda info --base)/etc/profile.d/conda.sh"; '
+        # activate and print environment as NUL-separated entries
+        f'conda activate "{env_path}"; env -0'
+    )
+    # use a login shell (-l) to mimic batch environment closely
+    proc = subprocess.Popen(
+        ["bash", "-lc", bash_cmd],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"Activation failed: {err.decode(errors='ignore')}")
+    # Parse NUL-separated KEY=VALUE entries robustly
+    updates = {}
+    for entry in out.split(b"\x00"):
+        if not entry:
+            continue
+        key, sep, value = entry.partition(b"=")
+        if not sep:
+            # skip junk lines without '='
+            continue
+        updates[key.decode()] = value.decode()
+    os.environ.update(updates)
 
 
 def clear_notebook_contents(nb):
@@ -31,6 +68,61 @@ def clear_notebook_contents(nb):
             cell.outputs = []
             cell.execution_count = None
     return result
+
+
+def create_script(notebook_path, output_path, scheduler=None):
+    notebook_path = Path(notebook_path)
+    notebook_name = notebook_path.stem
+
+    interpreter = sys.executable
+    conda_prefix = os.environ["CONDA_PREFIX"] if is_python_conda(interpreter) else None
+
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", mode="w", delete=False, encoding="utf-8"
+    ) as script:
+        script_path = script.name
+
+        try:
+            # print hashbang w/ interpreter path
+            script.write(f"#!{interpreter}\n")
+
+            # insert scehduler stub, optional
+            if scheduler is not None:
+                directives = scheduler(jobname=notebook_name, outputdir=output_path)
+                script.write(directives + "\n\n")
+
+            # import some basics
+            script.write("import os\n")
+            script.write("import sys\n")
+            script.write("import subprocess\n\n")
+
+            if conda_prefix is not None:
+                print(f"Activating conda environment: {conda_prefix}")
+                script.write("# initialize conda \n")
+                script.write("moduleshome = os.environ['MODULESHOME']\n")
+                script.write("exec(open(f'{moduleshome}/init/python.py').read())\n")
+                script.write("module('load conda')\n")
+                script.write("module('list')\n\n")
+
+                script.write("# activate conda environment \n")
+                script.write(f"os.environ['PROJ_LIB'] = '{conda_prefix}/share/proj'\n")
+                script.write(f"os.environ['PROJ_DATA'] = '{conda_prefix}/share/proj'\n")
+                script.write("from esnb.engine import activate_conda_env\n")
+                script.write(f"activate_conda_env('{conda_prefix}')\n\n")
+
+            script.write("# run notebook \n")
+            script.write("from esnb.engine import run_notebook\n")
+            script.write(f"run_notebook('{notebook_path}', '{output_path}')\n\n")
+
+            script.write("sys.exit()")
+
+        except Exception as exc:
+            print(f"Removing temp file: {script_path}")
+            os.remove(script_path)
+            raise exc
+
+    print(f"Finished writing to {script_path}\n\n")
+    return script_path
 
 
 def identify_current_kernel_name():
@@ -61,6 +153,19 @@ def identify_current_kernel_name():
         print(f"Using kernel: {kernel_name}")
 
     return kernel_name
+
+
+def is_python_conda(interpreter):
+    interpreter = (
+        Path(interpreter) if not isinstance(interpreter, Path) else interpreter
+    )
+    if "CONDA_PREFIX" in os.environ.keys():
+        conda_prefix = Path(os.environ["CONDA_PREFIX"])
+        conda_interpreter = Path(conda_prefix / "bin" / interpreter.name)
+        result = filecmp.cmp(conda_interpreter, interpreter)
+    else:
+        result = False
+    return result
 
 
 def is_url(url):
