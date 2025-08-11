@@ -12,6 +12,7 @@ from esnb.core.util2 import (
     infer_source_data_file_types,
     initialize_cases_from_source,
     xr_date_range_to_datetime,
+    process_key_value_string,
 )
 
 # TODO: Add tests for `read_json`, `reset_encoding`
@@ -87,5 +88,31 @@ def test_infer_source_data_file_types_2():
     assert infer_source_data_file_types(test_paths_2) == "unix_file"
 
 
-# test_infer_source_data_file_types_1()
-# test_infer_source_data_file_types_2()
+def test_process_key_value_string_1():
+    keyval_string = "PP_DIR:/path/to/some/dir,date_range:(1958-01-01,1977-12-31),extras:[123,'456',789]"
+    result = process_key_value_string(keyval_string)
+    assert isinstance(result, dict)
+
+
+def test_process_key_value_string_2():
+    keyval_string = "PP_DIR:/path/to/some/dir,date_range:(1958-01-01,1977-12-31),extras:[123,'456',789]"
+    result = process_key_value_string(keyval_string)
+    assert isinstance(result["date_range"], tuple)
+
+
+def test_process_key_value_string_3():
+    keyval_string = "PP_DIR:/path/to/some/dir,date_range:(1958-01-01,1977-12-31),extras:[123,'456',789]"
+    result = process_key_value_string(keyval_string)
+    assert isinstance(result["extras"], list)
+
+
+def test_process_key_value_string_4():
+    keyval_string = "PP_DIR:/path/to/some/dir,date_range:(1958-01-01,1977-12-31),extras:[123,'456',789]"
+    result = process_key_value_string(keyval_string)
+    assert isinstance(result["date_range"][0], str)
+
+
+def test_process_key_value_string_5():
+    keyval_string = "PP_DIR:/path/to/some/dir,date_range:(1958-01-01,1977-12-31),extras:[123,'456',789]"
+    result = process_key_value_string(keyval_string)
+    assert isinstance(result["extras"][0], str)

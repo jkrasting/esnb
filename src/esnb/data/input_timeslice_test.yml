@@ -20,7 +20,8 @@ case_list:
 
 ### Data location settings ###
 # Required: full or relative path to ESM-intake catalog header file
-DATA_CATALOG: "/glade/u/home/bundy/diag/mdtf/catalogs/esm_catalog_CESM_timeslice_mdtfv3.20241107.json"
+#DATA_CATALOG: "/glade/u/home/bundy/diag/mdtf/catalogs/esm_catalog_CESM_timeslice_mdtfv3.20241107.json"
+DATA_CATALOG: "/home/jpk/Desktop/esm_catalog_CESM_timeslice_mdtfv3.20241107.json"
 
 # Optional: Parent directory containing observational data used by individual PODs.
 # If defined, the framework assumes observational data is in OBS_DATA_ROOT/[POD_NAME]
