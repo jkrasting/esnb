@@ -16,6 +16,22 @@ from esnb.core.util import is_overlapping, process_time_string
 
 logger = logging.getLogger("__name__")
 
+__all__ = [
+    "case_time_filter",
+    "clean_string",
+    "flatten_list",
+    "generate_tempdir_path",
+    "fig_to_bytes",
+    "gemini",
+    "get_nesting_depth",
+    "infer_source_data_file_types",
+    "initialize_cases_from_source",
+    "process_key_value_string",
+    "read_json",
+    "reset_encoding",
+    "xr_date_range_to_datetime",
+]
+
 
 def case_time_filter(case, date_range):
     """
@@ -239,6 +255,160 @@ def initialize_cases_from_source(source):
             groups.append(subgroup)
 
     return groups
+
+
+def process_key_value_string(input_string):
+    if not input_string:
+        return {}
+
+    def parse_value(value_str):
+        """Parse a value string into appropriate type with string elements."""
+        value_str = value_str.strip()
+
+        def clean_element(element):
+            """Remove surrounding quotes from an element and convert to string."""
+            element = element.strip()
+            # Remove surrounding single or double quotes
+            if len(element) >= 2:
+                if (element.startswith('"') and element.endswith('"')) or (
+                    element.startswith("'") and element.endswith("'")
+                ):
+                    element = element[1:-1]
+            return str(element)
+
+        if value_str.startswith("(") and value_str.endswith(")"):
+            # Parse tuple
+            inner = value_str[1:-1].strip()
+            if not inner:
+                return ()
+            elements = []
+            i = 0
+            current = ""
+            bracket_depth = 0
+            quote_char = None
+
+            while i < len(inner):
+                char = inner[i]
+                if quote_char:
+                    # Inside quotes, ignore brackets and commas
+                    current += char
+                    if char == quote_char:
+                        quote_char = None
+                elif char in "\"'":
+                    quote_char = char
+                    current += char
+                elif char in "([":
+                    bracket_depth += 1
+                    current += char
+                elif char in ")]":
+                    bracket_depth -= 1
+                    current += char
+                elif char == "," and bracket_depth == 0:
+                    elements.append(clean_element(current))
+                    current = ""
+                else:
+                    current += char
+                i += 1
+
+            if current.strip():
+                elements.append(clean_element(current))
+
+            return tuple(elements)
+
+        elif value_str.startswith("[") and value_str.endswith("]"):
+            # Parse list
+            inner = value_str[1:-1].strip()
+            if not inner:
+                return []
+            elements = []
+            i = 0
+            current = ""
+            bracket_depth = 0
+            quote_char = None
+
+            while i < len(inner):
+                char = inner[i]
+                if quote_char:
+                    # Inside quotes, ignore brackets and commas
+                    current += char
+                    if char == quote_char:
+                        quote_char = None
+                elif char in "\"'":
+                    quote_char = char
+                    current += char
+                elif char in "([":
+                    bracket_depth += 1
+                    current += char
+                elif char in ")]":
+                    bracket_depth -= 1
+                    current += char
+                elif char == "," and bracket_depth == 0:
+                    elements.append(clean_element(current))
+                    current = ""
+                else:
+                    current += char
+                i += 1
+
+            if current.strip():
+                elements.append(clean_element(current))
+
+            return elements
+        else:
+            # Regular string value
+            return clean_element(value_str)
+
+    result = {}
+    i = 0
+
+    while i < len(input_string):
+        # Find the key (everything up to the first colon)
+        key_start = i
+        while i < len(input_string) and input_string[i] != ":":
+            i += 1
+
+        if i >= len(input_string):
+            break
+
+        key = input_string[key_start:i].strip()
+        i += 1  # Skip the colon
+
+        # Find the value
+        value_start = i
+
+        # Check if value starts with a bracket or parenthesis
+        if i < len(input_string) and input_string[i] in "([":
+            bracket_type = input_string[i]
+            closing_bracket = ")" if bracket_type == "(" else "]"
+            bracket_count = 1
+            i += 1
+
+            # Find the matching closing bracket
+            while i < len(input_string) and bracket_count > 0:
+                if input_string[i] == bracket_type:
+                    bracket_count += 1
+                elif input_string[i] == closing_bracket:
+                    bracket_count -= 1
+                i += 1
+        else:
+            # Regular value - find the next comma that's not inside brackets
+            bracket_depth = 0
+            while i < len(input_string):
+                if input_string[i] in "([":
+                    bracket_depth += 1
+                elif input_string[i] in ")]":
+                    bracket_depth -= 1
+                elif input_string[i] == "," and bracket_depth == 0:
+                    break
+                i += 1
+
+        value_str = input_string[value_start:i].strip()
+        result[str(key)] = parse_value(value_str)
+
+        # Skip the comma if we're not at the end
+        if i < len(input_string) and input_string[i] == ",":
+            i += 1
+
+    return result
 
 
 def read_json(name):
