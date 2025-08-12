@@ -5,6 +5,7 @@ import filecmp
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -67,7 +68,7 @@ def activate_conda_env(env_path: str):
     os.environ.update(updates)
 
 
-def canopy_launcher(run_settings):
+def canopy_launcher(run_settings, case_settings=None, verbose=False):
     conda_env_root = run_settings["conda_env_root"]
     notebook_path = run_settings["notebook_path"]
     outdir = run_settings["outdir"]
@@ -81,6 +82,8 @@ def canopy_launcher(run_settings):
         conda_prefix=conda_env_root,
         scripts_dir=scripts_dir,
         scheduler=scheduler,
+        case_settings=case_settings,
+        verbose=verbose,
     )
 
     return script_path
@@ -102,9 +105,14 @@ def create_script(
     scripts_dir=None,
     scheduler=None,
     verbose=False,
+    case_settings=None,
 ):
     notebook_path = Path(notebook_path)
     notebook_name = notebook_path.stem
+
+    if case_settings is not None:
+        assert isinstance(case_settings, dict), "case_settings must be a dict object"
+        case_settings = dict_to_key_value_string(str(case_settings))
 
     if conda_prefix is None:
         interpreter = sys.executable
@@ -147,6 +155,11 @@ def create_script(
                 script.write("from esnb.engine import activate_conda_env\n")
                 script.write(f"activate_conda_env('{conda_prefix}')\n\n")
 
+            if case_settings is not None:
+                script.write("# case settings override\n")
+                script.write(f"os.environ['ESNB_CASE_DATA'] = \"{case_settings}\"\n\n")
+                
+
             script.write("# run notebook \n")
             script.write("from esnb.engine import run_notebook\n")
             script.write(f"run_notebook('{notebook_path}', '{output_path}')\n\n")
@@ -179,6 +192,10 @@ def create_script(
 
     return str(script_path)
 
+def dict_to_key_value_string(text):
+    allowed_punctuation = r":\[\]\(\)\/\-\,\_\."
+    pattern = rf"[^a-zA-Z0-9{allowed_punctuation}]"
+    return re.sub(pattern, "", text)
 
 def identify_current_kernel_name():
     python_exec = sys.executable
@@ -258,8 +275,12 @@ def run_notebook(notebook_path, output_dir):
     nb = clear_notebook_contents(nb)
     kernel_name = identify_current_kernel_name()
 
+    import nest_asyncio
+    nest_asyncio.apply()
+    print("doing async io")
+
     client = NotebookClient(
-        nb, timeout=600, kernel_name=kernel_name, allow_errors=False
+        nb, timeout=600, kernel_name=kernel_name, allow_errors=True,
     )
     _ = client.execute()
 

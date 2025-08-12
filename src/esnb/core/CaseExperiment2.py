@@ -1,16 +1,11 @@
-import copy
 import logging
 from pathlib import Path
 
 import intake_esm
 
 from esnb.core.mdtf import MDTFCaseSettings
-from esnb.sites.gfdl import (
-    generate_gfdl_intake_catalog,
-    infer_gfdl_expname,
-    infer_is_gfdl_ppdir,
-    open_intake_catalog_dora,
-)
+from esnb.sites.gfdl import (generate_gfdl_intake_catalog, infer_gfdl_expname,
+                             infer_is_gfdl_ppdir, open_intake_catalog_dora)
 from esnb.sites.gfdl import site as at_gfdl
 
 from . import html, util
@@ -18,6 +13,7 @@ from .util_case import infer_case_source
 from .util_catalog import fill_catalog_nans, open_intake_catalog
 
 logger = logging.getLogger(__name__)
+
 
 
 class CaseExperiment2(MDTFCaseSettings):
@@ -134,6 +130,7 @@ class CaseExperiment2(MDTFCaseSettings):
                     logger.debug("Directory appears to be a valid pp dir")
                     self.name = infer_gfdl_expname(self.source)
                     self.catalog = generate_gfdl_intake_catalog(self.source)
+
                 else:
                     err = "Encountered a directory that is not a pp dir"
                     logger.error(err)
@@ -159,12 +156,16 @@ class CaseExperiment2(MDTFCaseSettings):
                 util.process_time_string
             )
 
-        # Try to eep a copy of the original catalog in case its needed later
-        try:
-            self._source_catalog = copy.deepcopy(self.catalog)
-        except Exception as exc:
-            logger.debug(str(exc))
-            logger.debug("Unable to deep copy source catalog. Not an immediate issue.")
+        # TODO: this block is failing for some reason
+
+        # Try to keep a copy of the original catalog in case its needed later
+        #try:
+        #    self._source_catalog = copy.deepcopy(self.catalog)
+        #except Exception as exc:
+        #    logger.debug(str(exc))
+        #    logger.debug("Unable to deep copy source catalog. Not an immediate issue.")
+        
+        self._source_catalog = None
 
     def files(self, **kwargs):
         if len(kwargs) > 0:
