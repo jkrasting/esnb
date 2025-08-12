@@ -3,6 +3,7 @@
 import copy
 import filecmp
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -16,8 +17,11 @@ import requests
 from nbclient import NotebookClient
 from nbconvert import HTMLExporter
 
+from esnb.sites.gfdl import slurm_stub
+
 __all__ = [
     "activate_conda_env",
+    "canopy_launcher",
     "clear_notebook_contents",
     "create_script",
     "identify_current_kernel_name",
@@ -27,6 +31,8 @@ __all__ = [
     "run_notebook",
     "write_notebook",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def activate_conda_env(env_path: str):
@@ -61,6 +67,25 @@ def activate_conda_env(env_path: str):
     os.environ.update(updates)
 
 
+def canopy_launcher(run_settings):
+    conda_env_root = run_settings["conda_env_root"]
+    notebook_path = run_settings["notebook_path"]
+    outdir = run_settings["outdir"]
+    scripts_dir = run_settings["scripts_dir"]
+
+    scheduler = slurm_stub
+
+    script_path = create_script(
+        notebook_path,
+        outdir,
+        conda_prefix=conda_env_root,
+        scripts_dir=scripts_dir,
+        scheduler=scheduler,
+    )
+
+    return script_path
+
+
 def clear_notebook_contents(nb):
     result = copy.deepcopy(nb)
     for cell in result.cells:
@@ -70,12 +95,24 @@ def clear_notebook_contents(nb):
     return result
 
 
-def create_script(notebook_path, output_path, scheduler=None):
+def create_script(
+    notebook_path,
+    output_path,
+    conda_prefix=None,
+    scripts_dir=None,
+    scheduler=None,
+    verbose=False,
+):
     notebook_path = Path(notebook_path)
     notebook_name = notebook_path.stem
 
-    interpreter = sys.executable
-    conda_prefix = os.environ["CONDA_PREFIX"] if is_python_conda(interpreter) else None
+    if conda_prefix is None:
+        interpreter = sys.executable
+        conda_prefix = (
+            os.environ["CONDA_PREFIX"] if is_python_conda(interpreter) else None
+        )
+    else:
+        interpreter = Path(f"{conda_prefix}/bin/python")
 
     with tempfile.NamedTemporaryFile(
         suffix=".py", mode="w", delete=False, encoding="utf-8"
@@ -97,7 +134,7 @@ def create_script(notebook_path, output_path, scheduler=None):
             script.write("import subprocess\n\n")
 
             if conda_prefix is not None:
-                print(f"Activating conda environment: {conda_prefix}")
+                logger.debug(f"Telling script to use conda environment: {conda_prefix}")
                 script.write("# initialize conda \n")
                 script.write("moduleshome = os.environ['MODULESHOME']\n")
                 script.write("exec(open(f'{moduleshome}/init/python.py').read())\n")
@@ -117,12 +154,30 @@ def create_script(notebook_path, output_path, scheduler=None):
             script.write("sys.exit()")
 
         except Exception as exc:
-            print(f"Removing temp file: {script_path}")
+            logger.debug(f"Removing temp file: {script_path}")
             os.remove(script_path)
             raise exc
 
-    print(f"Finished writing to {script_path}\n\n")
-    return script_path
+    if scripts_dir is not None:
+        scripts_dir = Path(scripts_dir)
+        if not scripts_dir.exists():
+            logger.debug(f"Making scripts dir: {scripts_dir}")
+            os.makedirs(scripts_dir)
+        new_script_path = scripts_dir / f"esnb_{notebook_name}.py"
+        shutil.move(script_path, new_script_path)
+        script_path = new_script_path
+
+    permissions = 0o755
+    logger.debug(f"Changing permissions: {script_path}")
+    os.chmod(script_path, permissions)
+
+    logger.debug(f"Finished writing to {script_path}\n\n")
+
+    if verbose:
+        with open(script_path, "r") as f:
+            print(f.read())
+
+    return str(script_path)
 
 
 def identify_current_kernel_name():
