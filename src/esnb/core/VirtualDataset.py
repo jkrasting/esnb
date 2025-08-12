@@ -5,6 +5,13 @@ class VirtualDataset:
     def replace(self, new_dataset):
         self.dataset = new_dataset
 
+    def rename(self, rename_dict):
+        self.dataset = self.dataset.rename(rename_dict)
+
+    @property
+    def keys(self):
+        return self.dataset.keys
+
 
 def resolve_dataset_refs(obj):
     if isinstance(obj, VirtualDataset):
