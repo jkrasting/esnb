@@ -216,7 +216,7 @@ def filter_catalog(catalog, variable):
 
 class CaseGroup2:
     """
-    CaseGroup2(source, name=None, description=None, concat_dim=None, date_range=None, **kwargs)
+    CaseGroup2(source, name=None, description=None, concat_dim=None, date_range=None, plot_color=None, **kwargs)
 
     A group of case objects with shared metadata and catalog management.
 
@@ -235,6 +235,8 @@ class CaseGroup2:
         Description of the case group.
     date_range : tuple or list
         The date range used to filter cases.
+    plot_color : str
+        Color associated with the group that is used for plotting.
     concat_dim : str
         The dimension along which to concatenate cases.
     is_resolved : bool
@@ -254,6 +256,7 @@ class CaseGroup2:
         self,
         source,
         concat_dim=None,
+        plot_color=None,
         name=None,
         date_range=None,
         description=None,
@@ -296,6 +299,7 @@ class CaseGroup2:
         self.name = name
         self.description = description
         self.date_range = date_range
+        self.plot_color = plot_color
         self.concat_dim = concat_dim
         self.is_resolved = False
         self.is_loaded = False
@@ -512,6 +516,8 @@ class CaseGroup2:
         )
         result += f"<tr><td><strong>is_resolved</strong></td><td>{color_logical(self.is_resolved)}</td></tr>"
         result += f"<tr><td><strong>is_loaded</strong></td><td>{color_logical(self.is_loaded)}</td></tr>"
+        _color = "black" if self.plot_color is None else self.plot_color
+        result += f"<tr><td><strong>plot_color</strong></td><td><span style='color: {_color};'>{self.plot_color}</span></td></tr>"
         result += f"<tr><td><strong>cases</strong></td><td>{self.cases}</td></tr>"
 
         if hasattr(self, "datasets"):

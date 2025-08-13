@@ -472,6 +472,9 @@ class NotebookDiagnostic:
 
         groups = [] if groups is None else groups
         groups = [groups] if not isinstance(groups, list) else groups
+
+        groups = assign_plot_colors(groups)
+
         self.groups = groups
         if hasattr(self.groups[0], "resolve_datasets"):
             # warnings.warn("Legacy CaseGroup object found.  Make sure you are using the latest version of ESNB.", DeprecationWarning, stacklevel=2)
@@ -569,6 +572,26 @@ class NotebookDiagnostic:
         result += "</table>"
 
         return result
+
+
+def assign_plot_colors(groups):
+    default_colors = [
+        "royalblue",
+        "darkorange",
+        "forestgreen",
+        "firebrick",
+        "slateblue",
+        "saddlebrown",
+        "deeppink",
+        "dimgray",
+        "olive",
+        "darkcyan",
+    ]
+    for group in groups:
+        if group.plot_color is None:
+            group.plot_color = default_colors[0]
+            default_colors.pop(0)
+    return groups
 
 
 def write_cached_datasets(
