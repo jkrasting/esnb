@@ -149,6 +149,8 @@ class CaseExperiment2(MDTFCaseSettings):
 
         logger.debug(f"Intake catalog before time range conversion: {self.catalog}")
 
+        logger.debug(f"Intake catalog before time range conversion: {self.catalog}")
+
         # Convert catalog `time_range` to tuple of datetime objects
         if isinstance(self.catalog, intake_esm.core.esm_datastore):
             logger.debug(
