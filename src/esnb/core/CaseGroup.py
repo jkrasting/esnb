@@ -1,5 +1,6 @@
 import os
 import tempfile
+import warnings
 
 import xarray as xr
 
@@ -20,6 +21,11 @@ class CaseGroup:
         source="dora",
         verbose=True,
     ):
+        warnings.warn(
+            "`CaseGroup` is deprecated and will be REMOVED on 18-Aug-25. Use `CaseGroup2` instead",
+            DeprecationWarning,
+        )
+
         self.locations = [locations] if not isinstance(locations, list) else locations
         if len(self.locations) > 1:
             assert concat_dim is not None, (
