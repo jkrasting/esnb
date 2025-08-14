@@ -1,3 +1,5 @@
+import warnings
+
 import yaml
 
 try:
@@ -27,6 +29,11 @@ class CaseExperiment:
         self.date_range = date_range
         self.source = source
         self.catalog = catalog
+
+        warnings.warn(
+            "`CaseExperiment` is deprecated and will be REMOVED on 18-Aug-25. Use `CaseExperiment2` instead",
+            DeprecationWarning,
+        )
 
         # TODO - make conformant to MDTF keys where possible
         if source == "dora":
