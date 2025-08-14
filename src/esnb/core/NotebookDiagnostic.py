@@ -116,7 +116,9 @@ class NotebookDiagnostic:
         self.varlist = varlist
         self.workdir = workdir
 
-        self.name = self.source if self.name is None else self.name
+        if self.name is None:
+            if isinstance(self.source, str):
+                self.name = self.source
 
         init_settings = {}
 
@@ -139,14 +141,22 @@ class NotebookDiagnostic:
             else:
                 init_settings[key] = None
 
-        assert isinstance(source, str), "String or valid path must be supplied"
+        assert (isinstance(source, str)) or (isinstance(source, dict)), (
+            "String, valid path, or dict must be supplied"
+        )
 
         # load an MDTF-compatible jsonc settings file
-        if os.path.exists(source):
-            logger.info(f"Reading MDTF settings file from: {source}")
-            loaded_file = read_json(source)
-            settings = loaded_file["settings"]
+        if (isinstance(source, dict)) or (os.path.exists(source)):
+            if isinstance(source, dict):
+                logger.debug("Processing MDTF settings dictionary")
+                loaded_file = source
+            elif os.path.exists(source):
+                logger.info(f"Reading MDTF settings file from: {source}")
+                loaded_file = read_json(source)
+            else:
+                raise ValueError(f"Source type {type(source)} is not supported.")
 
+            settings = loaded_file["settings"]
             self.dimensions = (
                 self.dimensions
                 if self.dimensions is not None
@@ -195,6 +205,13 @@ class NotebookDiagnostic:
 
         # initialize an empty groups attribute
         self.groups = []
+
+        # set diagnostic name to long_name if name is not set
+        if self.name is None:
+            if self.long_name is not None:
+                self.name = self.long_name
+            else:
+                self.name = "Generic MDTF Diagnostic"
 
         # initialize workdir
         if self.workdir is None:

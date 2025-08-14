@@ -74,19 +74,19 @@ def generate_gfdl_intake_catalog(pathpp, fre_cli=None):
     # Immediately force collection of any lazy operations
     try:
         # Method 1: Access df property which should trigger collection
-        if hasattr(catalog, 'df'):
+        if hasattr(catalog, "df"):
             df_len = len(catalog.df)
             print(f"Catalog collected: {df_len} entries")
-        
+
         # Method 2: If there are specific lazy frames, collect them
-        if hasattr(catalog, 'esmcat') and hasattr(catalog.esmcat, '_frames'):
+        if hasattr(catalog, "esmcat") and hasattr(catalog.esmcat, "_frames"):
             frames = catalog.esmcat._frames
-            if hasattr(frames, 'lf') and frames.lf is not None:
+            if hasattr(frames, "lf") and frames.lf is not None:
                 # Force immediate collection
                 frames.pl_df = frames.lf.collect()
-                if not hasattr(frames, 'df') or frames.df is None:
+                if not hasattr(frames, "df") or frames.df is None:
                     frames.df = frames.pl_df.to_pandas(use_pyarrow_extension_array=True)
-                
+
     except Exception as exc:
         logger.error("Unable to access generated intake catalog")
         raise exc

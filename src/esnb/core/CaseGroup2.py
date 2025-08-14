@@ -549,6 +549,8 @@ class CaseGroup2:
         for k in sorted(list(self.__dict__.keys())):
             if k in acceptable_keys:
                 v = self.__dict__[k]
+                if isinstance(v, dict):
+                    v = str(dict)
                 v = tuple(flatten_list(v)) if isinstance(v, list) else v
                 if isinstance(v, list):
                     hashables = hashables + v

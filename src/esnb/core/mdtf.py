@@ -106,22 +106,25 @@ class MDTFCaseSettings:
 
     Methods
     -------
-    load_mdtf_settings_file(settings_file)
+    load_mdtf_settings(settings_file)
         Loads MDTF settings from a YAML file, validates required fields, and
-        sets internal attributes.
+        sets internal attributes, or optionally, pass a dict with settings
 
     write_mdtf_settings_file(filename='case_settings.yml', fmt='yaml')
         Writes the current MDTF settings to a file in the specified format.
     """
 
-    def load_mdtf_settings_file(self, settings_file):
-        settings_file = Path(settings_file)
-        if not settings_file.exists():
-            raise FileNotFoundError(
-                f"MDTF settings file does not exist: {settings_file}"
-            )
-        with open(settings_file, "r") as f:
-            _settings = yaml.safe_load(f)
+    def load_mdtf_settings(self, settings_file):
+        if isinstance(settings_file, dict):
+            _settings = settings_file
+        else:
+            settings_file = Path(settings_file)
+            if not settings_file.exists():
+                raise FileNotFoundError(
+                    f"MDTF settings file does not exist: {settings_file}"
+                )
+            with open(settings_file, "r") as f:
+                _settings = yaml.safe_load(f)
         ingest_mdtf_settings_dict(self, _settings)
         self.source = str(settings_file)
 
