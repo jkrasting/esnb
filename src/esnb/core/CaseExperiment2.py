@@ -4,8 +4,12 @@ from pathlib import Path
 import intake_esm
 
 from esnb.core.mdtf import MDTFCaseSettings
-from esnb.sites.gfdl import (generate_gfdl_intake_catalog, infer_gfdl_expname,
-                             infer_is_gfdl_ppdir, open_intake_catalog_dora)
+from esnb.sites.gfdl import (
+    generate_gfdl_intake_catalog,
+    infer_gfdl_expname,
+    infer_is_gfdl_ppdir,
+    open_intake_catalog_dora,
+)
 from esnb.sites.gfdl import site as at_gfdl
 
 from . import html, util
@@ -13,7 +17,6 @@ from .util_case import infer_case_source
 from .util_catalog import fill_catalog_nans, open_intake_catalog
 
 logger = logging.getLogger(__name__)
-
 
 
 class CaseExperiment2(MDTFCaseSettings):
@@ -73,9 +76,9 @@ class CaseExperiment2(MDTFCaseSettings):
         self.name = name
 
         # Read the MDTF settings case file
-        if self.mode == "mdtf_settings":
-            logger.info("Loading MDTF Settings File")
-            self.load_mdtf_settings_file(source)
+        if (self.mode == "mdtf_settings") or (self.mode == "dictionary"):
+            logger.info("Loading MDTF Settings")
+            self.load_mdtf_settings(source)
             if len(self.mdtf_settings["case_list"]) == 0:
                 raise ValueError("No cases found in MDTF settings file")
             elif len(self.mdtf_settings["case_list"]) > 1:
@@ -159,12 +162,12 @@ class CaseExperiment2(MDTFCaseSettings):
         # TODO: this block is failing for some reason
 
         # Try to keep a copy of the original catalog in case its needed later
-        #try:
+        # try:
         #    self._source_catalog = copy.deepcopy(self.catalog)
-        #except Exception as exc:
+        # except Exception as exc:
         #    logger.debug(str(exc))
         #    logger.debug("Unable to deep copy source catalog. Not an immediate issue.")
-        
+
         self._source_catalog = None
 
     def files(self, **kwargs):
@@ -244,7 +247,9 @@ class CaseExperiment2(MDTFCaseSettings):
         return result
 
     def __hash__(self):
-        return hash((self.name, self.source))
+        _name = str(self.name)
+        _source = str(self.source)
+        return hash((_name, _source))
 
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()

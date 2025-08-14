@@ -158,7 +158,6 @@ def create_script(
             if case_settings is not None:
                 script.write("# case settings override\n")
                 script.write(f"os.environ['ESNB_CASE_DATA'] = \"{case_settings}\"\n\n")
-                
 
             script.write("# run notebook \n")
             script.write("from esnb.engine import run_notebook\n")
@@ -192,10 +191,12 @@ def create_script(
 
     return str(script_path)
 
+
 def dict_to_key_value_string(text):
     allowed_punctuation = r":\[\]\(\)\/\-\,\_\."
     pattern = rf"[^a-zA-Z0-9{allowed_punctuation}]"
     return re.sub(pattern, "", text)
+
 
 def identify_current_kernel_name():
     python_exec = sys.executable
@@ -276,11 +277,15 @@ def run_notebook(notebook_path, output_dir):
     kernel_name = identify_current_kernel_name()
 
     import nest_asyncio
+
     nest_asyncio.apply()
     print("doing async io")
 
     client = NotebookClient(
-        nb, timeout=600, kernel_name=kernel_name, allow_errors=True,
+        nb,
+        timeout=600,
+        kernel_name=kernel_name,
+        allow_errors=True,
     )
     _ = client.execute()
 

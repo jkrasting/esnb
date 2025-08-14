@@ -7,13 +7,13 @@ from esnb.core.util_mdtf import mdtf_settings_template_dict
 def test_MDTFCaseSettings():
     settings_file = esnb.datasources.test_mdtf_settings
     settings = mdtf.MDTFCaseSettings
-    settings.load_mdtf_settings_file(settings, settings_file)
+    settings.load_mdtf_settings(settings, settings_file)
 
 
 def test_MDTFCaseSettings_invalid_file():
     with pytest.raises(FileNotFoundError):
         x = mdtf.MDTFCaseSettings
-        x = x.load_mdtf_settings_file(x, "non_existent_file.yml")
+        x = x.load_mdtf_settings(x, "non_existent_file.yml")
 
 
 def test_mdtf_settings_template_dict_1():
