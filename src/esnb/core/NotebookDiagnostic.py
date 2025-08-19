@@ -456,6 +456,10 @@ class NotebookDiagnostic:
     def access_dataset(self, id=0):
         return self.datasets[id]
 
+    @property
+    def varmap(self):
+        return {x.varname: x for x in self.variables}
+
     def resolve(self, groups=None):
         """
         Resolve datasets for the provided groups and assign them to the
