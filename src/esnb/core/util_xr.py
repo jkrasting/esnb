@@ -30,6 +30,10 @@ def open_paths(files, varname=None):
             logger.debug("Found `z_i` in dataset; associating it as a coordinate.")
             ds["z_i"] = _ds["z_i"]
 
+        if "deptho" in _ds.keys():
+            logger.debug("Found `deptho` in dataset; associating it as a coordinate.")
+            ds["deptho"] = _ds["deptho"]
+
         ds.attrs = dict(_ds.attrs)
     else:
         ds = _ds
