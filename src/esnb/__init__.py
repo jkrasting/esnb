@@ -11,6 +11,7 @@ from .core.CaseGroup2 import CaseGroup2
 from .core.esnb_datastore import esnb_datastore
 from .core.NotebookDiagnostic import NotebookDiagnostic
 from .core.RequestedVariable import RequestedVariable
+from .core.util_dask import init_dask_cluster
 
 __all__ = [
     "core",
@@ -24,6 +25,7 @@ __all__ = [
     "esnb_datastore",
     "NotebookDiagnostic",
     "RequestedVariable",
+    "init_dask_cluster",
     "nbtools",
 ]
 

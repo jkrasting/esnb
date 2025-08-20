@@ -8,6 +8,7 @@ from . import (
     util,
     util2,
     util_catalog,
+    util_dask,
     util_mdtf,
     util_xr,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "util",
     "util2",
     "util_case",
+    "util_dask",
     "util_catalog",
     "util_mdtf",
     "util_xr",

@@ -23,6 +23,8 @@ classifiers = [
 ]
 dependencies = [
     "aiohttp",
+    "dask",
+    "dask-jobqueue",
     "importlib_metadata <5.0.0",
     "importlib-resources",
     "intake",
