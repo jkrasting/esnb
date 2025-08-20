@@ -30,6 +30,10 @@ def open_paths(files, varname=None):
             logger.debug("Found `z_i` in dataset; associating it as a coordinate.")
             ds["z_i"] = _ds["z_i"]
 
+        if "rho2_i" in _ds.keys():
+            logger.debug("Found `rho2_i` in dataset; associating it as a coordinate.")
+            ds["rho2_i"] = _ds["rho2_i"]
+
         if "deptho" in _ds.keys():
             logger.debug("Found `deptho` in dataset; associating it as a coordinate.")
             ds["deptho"] = _ds["deptho"]
@@ -66,6 +70,9 @@ def open_xr(files, xr_merge_opts=None):
         chunks={},
         **xr_merge_opts,
     )
+
+    ds.attrs["files"] = files
+
     return ds
 
 
