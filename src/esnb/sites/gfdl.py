@@ -4,6 +4,7 @@ including checking host reachability, managing file staging with dmget,
 and loading DORA catalogs via the esnb_datastore interface.
 """
 
+import getpass
 import logging
 import os
 import shutil
@@ -15,6 +16,8 @@ from pathlib import Path
 import intake
 import pandas as pd
 import requests
+from dask.distributed import Client
+from dask_jobqueue import SLURMCluster
 
 from esnb.core.esnb_datastore import esnb_datastore
 
@@ -37,6 +40,85 @@ except Exception:
 
 
 logger = logging.getLogger(__name__)
+
+
+def default_slurm_account(user=None):
+    user = getpass.getuser() if user is None else str(user)
+    cmd = ["sacctmgr", "show", "user", user, "format=defaultaccount", "-nP"]
+    default_account = subprocess.check_output(cmd, text=True).strip()
+    return default_account
+
+
+def dask_cluster_ppan(highmem=False, **kwargs):
+    if "account" not in kwargs.keys():
+        default_account = default_slurm_account()
+        logger.info(f"Setting SLURM account to {default_account}")
+        kwargs["account"] = default_account
+
+    if "dashboard_address" in kwargs.keys():
+        kwargs["scheduler_options"] = {"dashboard_address": kwargs["dashboard_address"]}
+        del kwargs["dashboard_address"]
+
+    if "jobs" in kwargs.keys():
+        jobs = kwargs["jobs"]
+        del kwargs["jobs"]
+    else:
+        jobs = None
+
+    if "wait" in kwargs.keys():
+        wait = kwargs["wait"]
+        del kwargs["wait"]
+    else:
+        wait = True
+
+    options = {
+        "queue": "batch",
+        "cores": 8,
+        "processes": 2,
+        "walltime": "01:00:00",
+        "local_directory": "$TMPDIR",
+        "death_timeout": 120,
+        "job_name": "esnb-dask",
+        "memory": "16GB",
+    }
+
+    if highmem:
+        options["job_extra_directives"] = ["--exclude=pp[008-010],pp[013-075]"]
+
+    options = {**options, **kwargs}
+
+    try:
+        cluster = SLURMCluster(**options)
+        client = Client(cluster)
+        logger.info(
+            f"Successfully started SLURM dask cluster: {cluster.dashboard_link}"
+        )
+
+    except Exception as exc:
+        logger.warning(f"Unable to start SLURMCluster: {exc}")
+        cluster = None
+        client = None
+
+    if (cluster is not None) and (jobs is not None):
+        try:
+            cluster.scale(jobs=int(jobs))
+            logger.info(f"Scaling SLURM dask cluster to {jobs} jobs.")
+
+            if wait:
+                logger.info("Waiting for a worker to come online ...")
+                client.wait_for_workers(n_workers=1)
+
+        except Exception as exc:
+            logger.warning(f"Unable to scale the SLURM cluster: {exc}")
+            cluster.close()
+
+            if client is not None:
+                client.close()
+
+            cluster = None
+            client = None
+
+    return (cluster, client)
 
 
 def generate_gfdl_intake_catalog(pathpp, fre_cli=None):
