@@ -275,7 +275,7 @@ def call_dmget(files, status=False, verbose=True):
             _ = subprocess.check_output(cmd)
 
 
-def convert_to_momgrid(diag, positive_longitudes=False):
+def convert_to_momgrid(diag, positive_longitudes=False, fatal_on_error=True):
     import momgrid
 
     for n, ds in enumerate(diag._datasets):
@@ -292,8 +292,9 @@ def convert_to_momgrid(diag, positive_longitudes=False):
             logger.debug(f"Replacing existing dataset [{n}] with momgrid version")
             ds.replace(_ds.data)
         except Exception as exc:
-            logger.debug(f"Unable to convert dataset [{n}] with momgrid")
-            raise exc
+            logger.warning(f"Unable to convert dataset [{n}] with momgrid: {exc}")
+            if fatal_on_error: 
+                raise exc
 
 
 def load_dora_catalog(idnum, **kwargs):
