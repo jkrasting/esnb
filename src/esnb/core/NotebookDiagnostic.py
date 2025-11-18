@@ -337,7 +337,14 @@ class NotebookDiagnostic:
         else:
             gfdl.call_dmget(self.files, status=status)
 
-    def load(self, site="gfdl", dmget=False, use_cache=False, cache_format="zarr"):
+    def load(
+        self,
+        site="gfdl",
+        dmget=False,
+        use_cache=False,
+        cache_format="zarr",
+        xr_opts=None,
+    ):
         """
         Load all groups by calling their load method.
         """
@@ -345,10 +352,21 @@ class NotebookDiagnostic:
             _ = [x.load() for x in self.groups]
         else:
             self.loader(
-                site=site, dmget=dmget, use_cache=use_cache, cache_format=cache_format
+                site=site,
+                dmget=dmget,
+                use_cache=use_cache,
+                cache_format=cache_format,
+                xr_opts=xr_opts,
             )
 
-    def loader(self, site="gfdl", dmget=False, use_cache=False, cache_format="zarr"):
+    def loader(
+        self,
+        site="gfdl",
+        dmget=False,
+        use_cache=False,
+        cache_format="zarr",
+        xr_opts=None,
+    ):
         diag = self
         groups = diag.groups
         variables = diag.variables
@@ -379,13 +397,14 @@ class NotebookDiagnostic:
                             cached_file_name,
                             decode_times=time_coder,
                             decode_timedelta=True,
+                            **xr_opts,
                         )
                     else:
                         raise ValueError(
                             f"Trying to open unsupported cache type: {cache_format}"
                         )
                 else:
-                    ds = group.open_var(var.varname)
+                    ds = group.open_var(var.varname, xr_opts=xr_opts)
 
                     tcoord = "time"
                     logger.info(
@@ -427,9 +446,14 @@ class NotebookDiagnostic:
         use_cache=False,
         cache_format="zarr",
         statics=False,
+        xr_opts=None,
     ):
         self.load(
-            site=site, dmget=dmget, use_cache=use_cache, cache_format=cache_format
+            site=site,
+            dmget=dmget,
+            use_cache=use_cache,
+            cache_format=cache_format,
+            xr_opts=xr_opts,
         )
         if statics:
             logger.info("Loading dictionary of static files")
