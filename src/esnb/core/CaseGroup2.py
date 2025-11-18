@@ -353,8 +353,8 @@ class CaseGroup2:
         caselist = [x for x in flatten_list(self.cases)]
         return sorted(flatten_list([list(x.catalog.df["path"]) for x in caselist]))
 
-    def open_var(self, varname):
-        return open_var_from_group(self, varname)
+    def open_var(self, varname, xr_opts=None):
+        return open_var_from_group(self, varname, xr_opts=xr_opts)
 
     def resolve(self, varlist):
         """

@@ -293,7 +293,7 @@ def convert_to_momgrid(diag, positive_longitudes=False, fatal_on_error=True):
             ds.replace(_ds.data)
         except Exception as exc:
             logger.warning(f"Unable to convert dataset [{n}] with momgrid: {exc}")
-            if fatal_on_error: 
+            if fatal_on_error:
                 raise exc
 
 

@@ -8,13 +8,13 @@ from esnb.core.util2 import get_nesting_depth, infer_source_data_file_types
 logger = logging.getLogger(__name__)
 
 
-def open_paths(files, varname=None):
+def open_paths(files, varname=None, xr_opts=None):
     file_type = infer_source_data_file_types(files)
     logger.debug(f"Found {file_type} files: {files}")
 
     if file_type == "unix_file":
         logger.info(f"Opening local files in xarray: {files}")
-        _ds = open_xr(files)
+        _ds = open_xr(files, xr_opts=xr_opts)
     elif file_type == "google_cloud":
         logger.info(f"Opening Google Cloud stores in xarray: {files}")
         _ds = open_gcs(files)
@@ -55,12 +55,23 @@ def open_gcs(files):
     return ds
 
 
-def open_xr(files, xr_merge_opts=None):
+def open_xr(files, xr_merge_opts=None, xr_opts=None):
     xr_merge_opts = (
         {"coords": "minimal", "compat": "override"}
         if xr_merge_opts is None
         else xr_merge_opts
     )
+
+    if xr_opts is None:
+        xr_opts = xr_merge_opts
+
+    assert isinstance(xr_opts, dict), "`xr_opts` must be a dictionary of kwargs"
+
+    if len(xr_opts) == 0:
+        xr_opts = {**xr_merge_opts}
+
+    if len(xr_opts) > 0:
+        logger.debug(f"Options passed to `xr.open_mfdataset`: {xr_opts}")
 
     time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
     ds = xr.open_mfdataset(
@@ -68,7 +79,7 @@ def open_xr(files, xr_merge_opts=None):
         decode_times=time_coder,
         decode_timedelta=True,
         chunks={},
-        **xr_merge_opts,
+        **xr_opts,
     )
 
     ds.attrs["files"] = files
@@ -76,7 +87,7 @@ def open_xr(files, xr_merge_opts=None):
     return ds
 
 
-def open_var_from_group(group, varname):
+def open_var_from_group(group, varname, xr_opts=None):
     concat_dim = group.concat_dim
     concat_dim = [concat_dim] if not isinstance(concat_dim, list) else concat_dim
 
@@ -96,7 +107,7 @@ def open_var_from_group(group, varname):
         nelements = len(case_elements)
         logger.debug(f"This case has {nelements} elements: {case_elements}")
         case_elements = [
-            open_paths(x.files(variable_id=varname), varname=varname)
+            open_paths(x.files(variable_id=varname), varname=varname, xr_opts=xr_opts)
             for x in case_elements
         ]
         if nelements > 1:
