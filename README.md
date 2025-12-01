@@ -13,3 +13,32 @@ Link to work-in-progress [documentation](https://docs.google.com/document/d/1cY-
 The final converged notebook should make use of established standards and conventions as much as possible.
 
 [Link to EMDS Standards](https://github.com/Earth-System-Diagnostics-Standards/EMDS/blob/main/standards.md)
+
+
+## Quick Start
+
+1. Set up a working directory
+```
+mkdir ~/esnb-test-dir && cd ~/esnb-test-dir
+```
+
+2. Create a test conda environment
+```
+conda create -y -n esnb_test jupyterlab pip
+conda activate esnb_test
+```
+
+4. Install ESNB
+```
+pip install esnb
+```
+
+6. Create a new Pangeo demo notebook
+```
+nbinit pangeo
+```
+
+8. Launch Jupyter
+```
+jupyter lab
+```
