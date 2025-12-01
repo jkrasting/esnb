@@ -25,6 +25,7 @@ dependencies = [
     "aiohttp",
     "dask",
     "dask-jobqueue",
+    "gcsfs",
     "importlib_metadata <5.0.0",
     "importlib-resources",
     "intake",
