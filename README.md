@@ -6,11 +6,8 @@
 #### <i>(formerly `notebook-template`)</i>
 Repository for analysis notebook template development.
 
-The objective of this repository is to converge on a Jupyter Notebook style that is common to the MDTF, MAR, and internal NCAR and GFDL analysis workflows.  This is an ambitious endeavor that will require on finding the common ground across all of the approaches while focusing on making the user experience lightweight and intuitive.
+Link to work-in-progress [documentation](https://docs.google.com/document/d/1cY-yWoEOANqsDICZWNFNkxbwUHjEXBL63mL6aBbVyyM/edit?usp=sharing) on Google Docs. (You may need to request access.)
 
-## Structure of the repository
-* `inspirations/`: This directory houses working examples of inspiration for how different groups are approaching the notebook construction.
-* (more notes added as needed)
 
 ## Standards
 The final converged notebook should make use of established standards and conventions as much as possible.
