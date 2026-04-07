@@ -275,7 +275,8 @@ def call_dmget(files, status=False, verbose=True):
             _ = subprocess.check_output(cmd)
 
 
-def convert_to_momgrid(diag, positive_longitudes=False, fatal_on_error=True):
+def convert_to_momgrid(diag, positive_longitudes=False, fatal_on_error=True,
+                       return_corners=False):
     import momgrid
 
     for n, ds in enumerate(diag._datasets):
@@ -284,7 +285,7 @@ def convert_to_momgrid(diag, positive_longitudes=False, fatal_on_error=True):
                 ds.rename({"yT": "yh"})
             if "xT" in ds.keys():
                 ds.rename({"xT": "xh"})
-            _ds = momgrid.Gridset(ds.dataset)
+            _ds = momgrid.Gridset(ds.dataset, return_corners=return_corners)
             if positive_longitudes:
                 logger.debug("Converting geolon to postive definite values")
                 _ds.data["geolon"] = _ds.data["geolon"] % 360

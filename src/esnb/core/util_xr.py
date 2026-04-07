@@ -8,13 +8,13 @@ from esnb.core.util2 import get_nesting_depth, infer_source_data_file_types
 logger = logging.getLogger(__name__)
 
 
-def open_paths(files, varname=None, xr_opts=None):
+def open_paths(files, varname=None, xr_opts=None, chunks="auto"):
     file_type = infer_source_data_file_types(files)
     logger.debug(f"Found {file_type} files: {files}")
 
     if file_type == "unix_file":
         logger.info(f"Opening local files in xarray: {files}")
-        _ds = open_xr(files, xr_opts=xr_opts)
+        _ds = open_xr(files, xr_opts=xr_opts, chunks=chunks)
     elif file_type == "google_cloud":
         logger.info(f"Opening Google Cloud stores in xarray: {files}")
         _ds = open_gcs(files)
@@ -55,9 +55,40 @@ def open_gcs(files):
     return ds
 
 
-def open_xr(files, xr_merge_opts=None, xr_opts=None):
+def _fix_time_coord(ds):
+    """Ensure time dimension has a coordinate with an index.
+
+    Called as a ``preprocess`` function for ``xr.open_mfdataset`` when
+    files are opened with ``decode_times=False``.  Handles two cases:
+
+    1. ``time`` is a dimension without a coordinate (malformed netCDF).
+       The coordinate is reconstructed from ``time_bnds`` midpoints.
+    2. ``time`` (or any other dimension) has a coordinate but no index,
+       which can happen with xarray >= 2026.1.0.
+    """
+    if "time" in ds.dims and "time" not in ds.coords:
+        if "time_bnds" in ds:
+            bnds = ds["time_bnds"]
+            midpoints = bnds.mean(dim="nv")
+            attrs = {}
+            for key in ("units", "calendar", "calendar_type"):
+                if key in bnds.attrs:
+                    attrs[key] = bnds.attrs[key]
+            midpoints.attrs = attrs
+            ds = ds.assign_coords(time=midpoints)
+            logger.debug("Reconstructed time coordinate from time_bnds")
+
+    return ds
+
+
+def open_xr(files, xr_merge_opts=None, xr_opts=None, chunks="auto"):
     xr_merge_opts = (
-        {"coords": "minimal", "compat": "override"}
+        {
+            "coords": "minimal",
+            "compat": "override",
+            "combine": "nested",
+            "concat_dim": "time",
+        }
         if xr_merge_opts is None
         else xr_merge_opts
     )
@@ -73,21 +104,26 @@ def open_xr(files, xr_merge_opts=None, xr_opts=None):
     if len(xr_opts) > 0:
         logger.debug(f"Options passed to `xr.open_mfdataset`: {xr_opts}")
 
-    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
+    # Allow chunks to be overridden via xr_opts, otherwise use the chunks parameter
+    if "chunks" not in xr_opts:
+        xr_opts["chunks"] = chunks
+
     ds = xr.open_mfdataset(
         files,
-        decode_times=time_coder,
-        decode_timedelta=True,
-        chunks={},
+        decode_times=False,
+        preprocess=_fix_time_coord,
         **xr_opts,
     )
+
+    time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
+    ds = xr.decode_cf(ds, decode_times=time_coder, decode_timedelta=True)
 
     ds.attrs["files"] = files
 
     return ds
 
 
-def open_var_from_group(group, varname, xr_opts=None):
+def open_var_from_group(group, varname, xr_opts=None, chunks="auto"):
     concat_dim = group.concat_dim
     concat_dim = [concat_dim] if not isinstance(concat_dim, list) else concat_dim
 
@@ -107,7 +143,7 @@ def open_var_from_group(group, varname, xr_opts=None):
         nelements = len(case_elements)
         logger.debug(f"This case has {nelements} elements: {case_elements}")
         case_elements = [
-            open_paths(x.files(variable_id=varname), varname=varname, xr_opts=xr_opts)
+            open_paths(x.files(variable_id=varname), varname=varname, xr_opts=xr_opts, chunks=chunks)
             for x in case_elements
         ]
         if nelements > 1:
